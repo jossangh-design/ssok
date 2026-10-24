@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쏙 — 한글·PDF·사진 용량 줄이기 무료 프로그램</title>
+<meta name="description" content="한글 문서까지 지정한 용량에 알아서 맞춰 줄이는 무료 윈도우 프로그램. 한글·PDF·사진을 한꺼번에 넣고 한 번에 줄이세요.">
+<meta property="og:title" content="쏙 — 첨부 문서 용량, 쏙 맞춰 줄입니다">
+<meta property="og:description" content="한글·PDF·사진, 파일 종류 상관없이 한 번에 줄이는 무료 프로그램">
+<meta property="og:image" content="https://jossangh-design.github.io/ssok/logo.png">
+<link rel="icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&amp;display=swap">
+<style>
+body{margin:0;background:#F2F4F3}
+a{color:#1A7A5E}a:hover{color:#145E48}
+.btn-main:hover{background:#18765B !important;color:#FFFFFF !important}
+.btn-sub:hover{background:#E6F4EE !important;color:#145E48 !important}
+details summary{cursor:pointer;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details[open] .faq-plus{transform:rotate(45deg)}
+</style>
+<style>html{scroll-behavior:smooth}</style>
+</head>
+<body>
+<div style="font-family: 'Noto Sans KR', 'Malgun Gothic', 'Segoe UI', sans-serif; color: #1F2328; background: #F2F4F3; min-height: 100vh; word-break: keep-all; line-height: 1.6;">
+
+<!-- 머리줄 -->
+<header style="background: #FFFFFF; border-bottom: 1px solid #DDE2E0;">
+<div style="max-width: 1120px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+<a href="#top" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #1F2328;">
+<img src="logo.png" alt="" style="width: 36px; height: 36px; border-radius: 9px;">
+<span style="font-size: 22px; font-weight: 900; letter-spacing: -0.5px;">쏙</span>
+</a>
+<nav aria-label="바로가기" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 15px;">
+<a href="#how" style="padding: 10px 12px; text-decoration: none; color: #3A4048; border-radius: 8px;">사용법</a>
+<a href="#warning" style="padding: 10px 12px; text-decoration: none; color: #3A4048; border-radius: 8px;">처음 실행할 때</a>
+<a href="#faq" style="padding: 10px 12px; text-decoration: none; color: #3A4048; border-radius: 8px;">자주 묻는 질문</a>
+<a class="btn-main" data-dl="setup" href="https://github.com/jossangh-design/ssok/releases/latest/download/Ssok-Setup-0.4.0.exe" style="margin-left: 8px; padding: 10px 18px; background: #1F8A6B; color: #FFFFFF; text-decoration: none; border-radius: 8px; font-weight: 700;">다운로드</a>
+</nav>
+</div>
+</header>
+
+<!-- 첫 화면 -->
+<section id="top" style="background: #FFFFFF;">
+<div style="max-width: 1120px; margin: 0 auto; padding: 72px 24px 80px; display: flex; flex-wrap: wrap; align-items: center; gap: 56px;">
+<div style="flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 22px;">
+<span style="align-self: flex-start; padding: 6px 14px; background: #E6F4EE; color: #1A7A5E; border-radius: 999px; font-size: 14px; font-weight: 700;">선생님을 위한 무료 윈도우 프로그램</span>
+<h1 style="margin: 0; font-size: clamp(36px, 5.2vw, 58px); line-height: 1.22; font-weight: 900; letter-spacing: -1.5px;">첨부 문서 용량,<br><span style="color: #1F8A6B;">쏙</span> 맞춰 줄입니다</h1>
+<p style="margin: 0; font-size: 19px; color: #3A4048; max-width: 540px; line-height: 1.7;"><span style="display: inline-block;"><strong style="color: #1F2328;">한글 문서까지</strong> 지정한 용량에</span> <span style="display: inline-block;">알아서 맞춰 줄입니다.</span><br><span style="display: inline-block;">한글·PDF·사진,</span> <span style="display: inline-block;">파일 종류 상관없이</span><br><span style="display: inline-block;">한꺼번에 넣고</span> <span style="display: inline-block;"><strong style="color: #1F2328;">한 번에</strong> 줄이세요.</span></p>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px;">
+<a class="btn-main" data-dl="setup" href="https://github.com/jossangh-design/ssok/releases/latest/download/Ssok-Setup-0.4.0.exe" style="display: flex; align-items: center; gap: 10px; padding: 16px 26px; background: #1F8A6B; color: #FFFFFF; text-decoration: none; border-radius: 10px; font-size: 18px; font-weight: 700;">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"></path><path d="M7 10l5 5 5-5"></path><path d="M5 20h14"></path></svg>
+무료 다운로드
+</a>
+<a class="btn-sub" data-dl="zip" href="https://github.com/jossangh-design/ssok/releases/latest/download/Ssok-Portable-0.4.0.zip" style="display: flex; align-items: center; padding: 16px 22px; background: #FFFFFF; color: #1A7A5E; text-decoration: none; border: 1.5px solid #9DCBBB; border-radius: 10px; font-size: 17px; font-weight: 700;">설치 없이 쓰기 (zip)</a>
+</div>
+<p style="margin: 0; font-size: 14px; color: #6B727A;">버전 <span data-ver>0.4.0</span> · Windows 10 이상 (64비트) · 관리자 권한 필요 없음</p>
+</div>
+
+<!-- 쏙 화면 그림 -->
+<div aria-hidden="true" style="flex: 1 1 480px; min-width: 0;">
+<div style="background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 14px; box-shadow: 0 24px 60px rgba(31,35,40,0.12); overflow: hidden;">
+<div style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #DDE2E0; background: #F6F8F7;">
+<img src="logo.png" alt="" style="width: 18px; height: 18px; border-radius: 4px;">
+<span style="font-size: 13px; font-weight: 700;">쏙</span>
+<div style="flex-grow: 1;"></div>
+<span style="width: 10px; height: 10px; border-radius: 5px; background: #CDD4D1;"></span>
+<span style="width: 10px; height: 10px; border-radius: 5px; background: #CDD4D1;"></span>
+<span style="width: 10px; height: 10px; border-radius: 5px; background: #CDD4D1;"></span>
+</div>
+<div style="display: flex; flex-wrap: wrap; background: #F2F4F3;">
+<div style="flex: 1 1 170px; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: #FFFFFF; border-right: 1px solid #DDE2E0;">
+<span style="font-size: 12px; font-weight: 700; color: #6B727A;">목표 용량</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px;">
+<span style="padding: 4px 10px; border: 1px solid #CDD4D1; border-radius: 999px; font-size: 12px;">1MB</span>
+<span style="padding: 4px 10px; border: 1px solid #CDD4D1; border-radius: 999px; font-size: 12px;">3MB</span>
+<span style="padding: 4px 10px; background: #1F8A6B; color: #FFFFFF; border-radius: 999px; font-size: 12px; font-weight: 700;">5MB</span>
+<span style="padding: 4px 10px; border: 1px solid #CDD4D1; border-radius: 999px; font-size: 12px;">10MB</span>
+</div>
+<div style="display: flex; background: #EEF1F0; border-radius: 8px; padding: 3px; font-size: 12px;">
+<span style="flex: 1; text-align: center; padding: 5px 0; background: #FFFFFF; border-radius: 6px; font-weight: 700;">파일마다</span>
+<span style="flex: 1; text-align: center; padding: 5px 0; color: #6B727A;">모두 합쳐서</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #3A4048;">
+<span style="width: 15px; height: 15px; border-radius: 4px; background: #1F8A6B;"></span>위치정보 지우기
+</div>
+<div style="flex-grow: 1; min-height: 12px;"></div>
+<span style="padding: 10px 0; text-align: center; background: #1F8A6B; color: #FFFFFF; border-radius: 8px; font-size: 14px; font-weight: 700;">쏙 줄이기</span>
+</div>
+<div style="flex: 2 1 260px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 10px;">
+<span style="width: 15px; height: 15px; border-radius: 4px; background: #1F8A6B; flex-shrink: 0;"></span>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px;">
+<span style="font-size: 12px; font-weight: 700;">현장체험학습 계획서_쏙.hwpx</span>
+<div style="height: 5px; border-radius: 3px; background: #DCE6E2;"><div style="width: 100%; height: 5px; border-radius: 3px; background: #1F8A6B;"></div></div>
+</div>
+<span style="font-size: 12px; color: #1A7A5E; font-weight: 700; white-space: nowrap;">12.4 → 4.7MB</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 10px;">
+<span style="width: 15px; height: 15px; border-radius: 4px; background: #1F8A6B; flex-shrink: 0;"></span>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px;">
+<span style="font-size: 12px; font-weight: 700;">운동회 사진_쏙.jpg</span>
+<div style="height: 5px; border-radius: 3px; background: #DCE6E2;"><div style="width: 100%; height: 5px; border-radius: 3px; background: #1F8A6B;"></div></div>
+</div>
+<span style="font-size: 12px; color: #1A7A5E; font-weight: 700; white-space: nowrap;">8.1 → 4.9MB</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 10px;">
+<span style="width: 15px; height: 15px; border-radius: 4px; border: 1.5px solid #B9C1BE; box-sizing: border-box; flex-shrink: 0;"></span>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px;">
+<span style="font-size: 12px; font-weight: 700;">수업 자료.pdf</span>
+<div style="height: 5px; border-radius: 3px; background: #DCE6E2;"><div style="width: 60%; height: 5px; border-radius: 3px; background: #1F8A6B;"></div></div>
+</div>
+<span style="font-size: 12px; color: #6B727A; white-space: nowrap;">줄이는 중</span>
+</div>
+<div style="margin-top: 4px; padding: 14px; border: 1.5px dashed #CDD4D1; border-radius: 10px; background: #F6F8F7; text-align: center; font-size: 12px; color: #6B727A;">여기에 파일을 끌어다 놓으세요</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- 사용법 -->
+<section id="how" style="max-width: 1120px; margin: 0 auto; padding: 88px 24px 24px;">
+<h2 style="margin: 0 0 8px; font-size: 34px; font-weight: 900; letter-spacing: -0.8px;">세 번이면 끝납니다</h2>
+<p style="margin: 0 0 36px; font-size: 17px; color: #3A4048;">어려운 설정 없이, 고르고 누르면 됩니다.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+<div style="background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 14px; padding: 28px; display: flex; flex-direction: column; gap: 10px;">
+<span style="width: 40px; height: 40px; border-radius: 20px; background: #E6F4EE; color: #1A7A5E; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px;">1</span>
+<h3 style="margin: 0; font-size: 20px; font-weight: 700;">파일을 끌어다 놓습니다</h3>
+<p style="margin: 0; color: #3A4048;">한글, PDF, 사진을 섞어서 여러 개 한꺼번에 넣어도 됩니다.</p>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 14px; padding: 28px; display: flex; flex-direction: column; gap: 10px;">
+<span style="width: 40px; height: 40px; border-radius: 20px; background: #E6F4EE; color: #1A7A5E; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px;">2</span>
+<h3 style="margin: 0; font-size: 20px; font-weight: 700;">목표 용량을 고릅니다</h3>
+<p style="margin: 0; color: #3A4048;">파일마다 정할 수도, 모두 합쳐서 정할 수도 있습니다.</p>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 14px; padding: 28px; display: flex; flex-direction: column; gap: 10px;">
+<span style="width: 40px; height: 40px; border-radius: 20px; background: #E6F4EE; color: #1A7A5E; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px;">3</span>
+<h3 style="margin: 0; font-size: 20px; font-weight: 700;">'쏙 줄이기'를 누릅니다</h3>
+<p style="margin: 0; color: #3A4048;">다 줄면 체크해서 저장합니다. 여러 개는 zip 하나로 받습니다.</p>
+</div>
+</div>
+</section>
+
+<!-- 줄일 수 있는 파일 -->
+<section style="max-width: 1120px; margin: 0 auto; padding: 72px 24px 24px;">
+<h2 style="margin: 0 0 8px; font-size: 34px; font-weight: 900; letter-spacing: -0.8px;">한글 문서까지, 종류 상관없이 한 방에</h2>
+<p style="margin: 0 0 36px; font-size: 17px; color: #3A4048;">프로그램을 이것저것 따로 찾을 필요가 없습니다. 쏙 하나에 다 넣으면 됩니다.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+<div style="background: #E6F4EE; border: 1.5px solid #9DCBBB; border-radius: 14px; padding: 28px; display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+<svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path><path d="M8.5 12.5h3"></path><path d="M10 12.5v5"></path><path d="M13.5 15h2.5"></path></svg>
+<span style="padding: 4px 12px; background: #1F8A6B; color: #FFFFFF; border-radius: 999px; font-size: 13px; font-weight: 700;">쏙만의 장점</span>
+</div>
+<h3 style="margin: 0; font-size: 20px; font-weight: 700;">한글 문서 (hwp·hwpx)</h3>
+<p style="margin: 0; color: #3A4048;">사진이 잔뜩 들어간 한글 파일도 지정한 용량에 알아서 맞춰 줄입니다. 문서 속 그림만 다시 압축하니 글자·표·서식은 그대로입니다.</p>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 14px; padding: 28px; display: flex; flex-direction: column; gap: 12px;">
+<svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>
+<h3 style="margin: 0; font-size: 20px; font-weight: 700;">PDF</h3>
+<p style="margin: 0; color: #3A4048;">먼저 문서 속 그림만 줄입니다. 그래도 크면 쪽을 그림으로 바꿔 맞춥니다. 이때는 글자 검색·복사가 안 될 수 있습니다.</p>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 14px; padding: 28px; display: flex; flex-direction: column; gap: 12px;">
+<svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"></rect><circle cx="9" cy="10" r="2"></circle><path d="M21 16l-5-5-9 9"></path></svg>
+<h3 style="margin: 0; font-size: 20px; font-weight: 700;">사진</h3>
+<p style="margin: 0; color: #3A4048;">JPG·PNG는 화질과 크기를 조금씩 낮춰 목표에 맞춥니다. 아이폰 사진(HEIC)·WebP·BMP는 JPG로 바꿔 저장합니다.</p>
+</div>
+</div>
+</section>
+
+<!-- 안심 -->
+<section style="max-width: 1120px; margin: 0 auto; padding: 72px 24px 24px;">
+<div style="background: #1F8A6B; color: #FFFFFF; border-radius: 20px; padding: 48px 40px; display: flex; flex-wrap: wrap; gap: 40px;">
+<div style="flex: 1 1 300px; min-width: 0;">
+<h2 style="margin: 0 0 12px; font-size: 32px; font-weight: 900; letter-spacing: -0.8px; line-height: 1.3;">학교 문서도<br>안심하고 넣으세요</h2>
+<p style="margin: 0; font-size: 17px; color: #E6F4EE;">쏙은 내 PC 안에서만 일합니다.</p>
+</div>
+<ul style="flex: 2 1 420px; min-width: 0; margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px 28px;">
+<li style="display: flex; flex-direction: column; gap: 4px;"><strong style="font-size: 17px;">인터넷으로 보내지 않습니다</strong><span style="color: #E6F4EE; font-size: 15px;">파일과 내용은 이 컴퓨터 밖으로 나가지 않습니다.</span></li>
+<li style="display: flex; flex-direction: column; gap: 4px;"><strong style="font-size: 17px;">원본은 그대로 둡니다</strong><span style="color: #E6F4EE; font-size: 15px;">줄인 파일은 '원래이름_쏙'으로 따로 저장합니다.</span></li>
+<li style="display: flex; flex-direction: column; gap: 4px;"><strong style="font-size: 17px;">사진 위치정보를 지웁니다</strong><span style="color: #E6F4EE; font-size: 15px;">촬영 장소(GPS) 정보를 빼고 저장할 수 있습니다.</span></li>
+<li style="display: flex; flex-direction: column; gap: 4px;"><strong style="font-size: 17px;">무료, 공개된 소스</strong><span style="color: #E6F4EE; font-size: 15px;">누구나 소스를 볼 수 있는 오픈소스(MIT)입니다.</span></li>
+</ul>
+</div>
+</section>
+
+<!-- 처음 실행할 때 -->
+<section id="warning" style="max-width: 1120px; margin: 0 auto; padding: 88px 24px 24px;">
+<h2 style="margin: 0 0 8px; font-size: 34px; font-weight: 900; letter-spacing: -0.8px;">처음 실행할 때 파란 창이 뜨면</h2>
+<p style="margin: 0 0 36px; font-size: 17px; color: #3A4048; max-width: 760px;">쏙은 새로 나온 프로그램이라 윈도우가 아직 잘 모릅니다. 그래서 처음 한 번 "Windows의 PC 보호" 창이 뜰 수 있습니다. 아래처럼 두 번만 누르면 됩니다.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 20px;">
+<div style="flex: 1 1 320px; min-width: 0; background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+<span style="font-size: 18px; font-weight: 700;"><span style="color: #1A7A5E;">①</span> '추가 정보'를 누릅니다</span>
+<div aria-hidden="true" style="background: #1E5A9C; color: #FFFFFF; border-radius: 6px; padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 10px; min-height: 170px;">
+<span style="font-size: 20px; font-weight: 500;">Windows의 PC 보호</span>
+<span style="font-size: 13px; color: #DCE8F5;">Microsoft Defender SmartScreen에서 인식할 수 없는 앱의 시작을 차단했습니다.</span>
+<span style="align-self: flex-start; font-size: 13px; text-decoration: underline; outline: 2.5px solid #F5C518; outline-offset: 3px; border-radius: 2px;">추가 정보</span>
+<div style="flex-grow: 1;"></div>
+<span style="align-self: flex-end; padding: 6px 22px; border: 1px solid #FFFFFF; font-size: 13px;">실행 안 함</span>
+</div>
+</div>
+<div style="flex: 1 1 320px; min-width: 0; background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+<span style="font-size: 18px; font-weight: 700;"><span style="color: #1A7A5E;">②</span> '실행'을 누릅니다</span>
+<div aria-hidden="true" style="background: #1E5A9C; color: #FFFFFF; border-radius: 6px; padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 10px; min-height: 170px;">
+<span style="font-size: 20px; font-weight: 500;">Windows의 PC 보호</span>
+<span style="font-size: 13px; color: #DCE8F5;">앱: Ssok-Setup.exe<br>게시자: 알 수 없는 게시자</span>
+<div style="flex-grow: 1;"></div>
+<div style="display: flex; justify-content: flex-end; gap: 8px;">
+<span style="padding: 6px 22px; border: 1px solid #FFFFFF; font-size: 13px; outline: 2.5px solid #F5C518; outline-offset: 3px;">실행</span>
+<span style="padding: 6px 22px; border: 1px solid #FFFFFF; font-size: 13px;">실행 안 함</span>
+</div>
+</div>
+</div>
+</div>
+<p style="margin: 20px 0 0; font-size: 15px; color: #6B727A;">이 창은 처음 한 번만 뜹니다. 정식 인증서(코드 서명)를 신청해 두었고, 서명이 붙으면 이 창이 뜨지 않습니다.</p>
+</section>
+
+<!-- 자주 묻는 질문 -->
+<section id="faq" style="max-width: 880px; margin: 0 auto; padding: 88px 24px 24px;">
+<h2 style="margin: 0 0 28px; font-size: 34px; font-weight: 900; letter-spacing: -0.8px;">자주 묻는 질문</h2>
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<details style="background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 12px; padding: 0 22px;">
+<summary style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; font-size: 17px; font-weight: 700;">설치판과 '설치 없이 쓰기'는 뭐가 다른가요?<span class="faq-plus" aria-hidden="true" style="font-size: 24px; color: #1A7A5E; transition: transform .2s;">+</span></summary>
+<p style="margin: 0 0 20px; color: #3A4048;">설치판을 추천합니다. 시작 메뉴에 생기고, 새 버전이 나오면 쏙 안에서 단추 하나로 바뀝니다. 설치 없이 쓰기는 zip 압축을 풀고 Ssok.exe를 바로 실행합니다. USB에 넣어 다닐 때 좋습니다.</p>
+</details>
+<details style="background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 12px; padding: 0 22px;">
+<summary style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; font-size: 17px; font-weight: 700;">학교 컴퓨터에서도 설치되나요?<span class="faq-plus" aria-hidden="true" style="font-size: 24px; color: #1A7A5E; transition: transform .2s;">+</span></summary>
+<p style="margin: 0 0 20px; color: #3A4048;">관리자 권한 없이 설치됩니다. 다만 학교마다 프로그램 설치를 막아 둔 곳이 있으니, 안 되면 정보 담당 선생님께 여쭤 보세요.</p>
+</details>
+<details style="background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 12px; padding: 0 22px;">
+<summary style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; font-size: 17px; font-weight: 700;">목표 용량까지 못 줄이면 어떻게 되나요?<span class="faq-plus" aria-hidden="true" style="font-size: 24px; color: #1A7A5E; transition: transform .2s;">+</span></summary>
+<p style="margin: 0 0 20px; color: #3A4048;">글자를 알아볼 수 없을 만큼은 줄이지 않습니다. 가장 많이 줄여도 모자라면 그 결과를 '목표 미달'로 알려 드립니다.</p>
+</details>
+<details style="background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 12px; padding: 0 22px;">
+<summary style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; font-size: 17px; font-weight: 700;">지우고 싶으면요?<span class="faq-plus" aria-hidden="true" style="font-size: 24px; color: #1A7A5E; transition: transform .2s;">+</span></summary>
+<p style="margin: 0 0 20px; color: #3A4048;">윈도우 설정 → 앱 → 설치된 앱에서 '쏙'을 찾아 제거를 누르면 됩니다.</p>
+</details>
+</div>
+</section>
+
+<!-- 마지막 다운로드 -->
+<section style="max-width: 1120px; margin: 0 auto; padding: 88px 24px;">
+<div style="background: #FFFFFF; border: 1px solid #DDE2E0; border-radius: 20px; padding: 48px 32px; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center;">
+<img src="logo.png" alt="쏙 로고" style="width: 72px; height: 72px; border-radius: 18px;">
+<h2 style="margin: 0; font-size: 30px; font-weight: 900; letter-spacing: -0.6px;">한글·PDF·사진, 이제 쏙 하나로</h2>
+<a class="btn-main" data-dl="setup" href="https://github.com/jossangh-design/ssok/releases/latest/download/Ssok-Setup-0.4.0.exe" style="display: flex; align-items: center; gap: 10px; padding: 16px 30px; background: #1F8A6B; color: #FFFFFF; text-decoration: none; border-radius: 10px; font-size: 18px; font-weight: 700;">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"></path><path d="M7 10l5 5 5-5"></path><path d="M5 20h14"></path></svg>
+무료 다운로드 (설치판)
+</a>
+<span style="font-size: 14px; color: #6B727A;">버전 <span data-ver>0.4.0</span> · Windows 10 이상 (64비트)</span>
+</div>
+</section>
+
+<footer style="border-top: 1px solid #DDE2E0; background: #FFFFFF;">
+<div style="max-width: 1120px; margin: 0 auto; padding: 28px 24px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 14px; color: #6B727A;">
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<span>선생님이 선생님을 위해 만들었습니다</span>
+<span style="font-size: 13px;">© 2026 쏙(Ssok) · jossangh-design. MIT License로 누구나 무료로 쓸 수 있습니다.</span>
+</div>
+<div style="display: flex; gap: 18px; flex-wrap: wrap;">
+<a href="https://github.com/jossangh-design/ssok/releases" style="padding: 4px 0;">지난 버전</a>
+<a href="https://github.com/jossangh-design/ssok" style="padding: 4px 0;">소스 코드</a>
+<a href="https://github.com/jossangh-design/ssok/issues" style="padding: 4px 0;">문의·오류 알리기</a>
+</div>
+</div>
+</footer>
+
+</div>
+<script>
+// 최신 버전 파일로 다운로드 단추를 맞춥니다 (실패하면 적어 둔 링크 그대로).
+fetch('https://api.github.com/repos/jossangh-design/ssok/releases/latest')
+  .then(function (r) { return r.ok ? r.json() : null; })
+  .then(function (rel) {
+    if (!rel || !rel.assets) return;
+    var setup = rel.assets.find(function (a) { return /^Ssok-Setup-.*\.exe$/.test(a.name); });
+    var zip = rel.assets.find(function (a) { return /^Ssok-Portable-.*\.zip$/.test(a.name); });
+    document.querySelectorAll('[data-dl="setup"]').forEach(function (el) { if (setup) el.href = setup.browser_download_url; });
+    document.querySelectorAll('[data-dl="zip"]').forEach(function (el) { if (zip) el.href = zip.browser_download_url; });
+    var v = (rel.tag_name || '').replace(/^v/, '');
+    if (v) document.querySelectorAll('[data-ver]').forEach(function (el) { el.textContent = v; });
+  })
+  .catch(function () {});
+</script>
+</body>
+</html>

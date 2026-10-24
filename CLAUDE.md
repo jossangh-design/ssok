@@ -23,6 +23,7 @@
 | `tests/Ssok.Core.Tests` | 외부 패키지 없는 시험 프로그램 (`dotnet run`) |
 | `installer/Ssok.iss` | Inno Setup 설치판 (관리자 권한 없이 `%LocalAppData%\Programs\Ssok`) |
 | `.github/workflows/release.yml` | 공식 배포 자동화 |
+| `docs/` | 다운로드 홈페이지 (GitHub Pages, main 브랜치 /docs). 다운로드 단추는 최신 Release 파일을 자동으로 찾아감 |
 | `tools/make-update-key.*` | 업데이트 서명 키 만들기 (이미 만들어 GitHub 비밀값 `SSOK_UPDATE_KEY`에 넣음 — 다시 만들지 말 것) |
 
 알아 둘 동작:
