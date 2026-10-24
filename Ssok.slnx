@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Ssok.App/Ssok.App.csproj" />
+    <Project Path="src/Ssok.Core/Ssok.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ssok.Core.Tests/Ssok.Core.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,9 @@
+bin/
+obj/
+dist/
+release/
+build-log.txt
+*.user
+.vs/
+.cache/
+build-selftest.txt

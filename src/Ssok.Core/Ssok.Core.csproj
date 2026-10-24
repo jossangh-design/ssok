@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Ssok.Core</RootNamespace>
+    <!-- 문서 처리 코드에는 네트워크 기능을 넣지 않는다 (설계서: 보안 설계 원칙). -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- hwp(복합 파일) 읽기·쓰기. MPL-2.0 (THIRD-PARTY-NOTICES.md 참고) -->
+    <PackageReference Include="OpenMcdf" Version="3.3.0" />
+  </ItemGroup>
+
+</Project>

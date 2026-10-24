@@ -1,0 +1,565 @@
+<Window x:Class="Ssok.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="쏙"
+        Icon="/Assets/ssok.ico"
+        Width="1240" Height="800" MinWidth="980" MinHeight="660"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Malgun Gothic, Segoe UI" FontSize="14"
+        Background="{StaticResource Canvas}"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Display"
+        AllowDrop="True" DragEnter="OnDragEnter" DragOver="OnDragOver" DragLeave="OnDragLeave" Drop="OnDrop">
+
+    <Window.Resources>
+        <!-- 아래 화살표 + 받침 (다운로드) -->
+        <Geometry x:Key="DownloadIcon">M8,1.5 L8,10.5 M4,6.8 L8,10.8 L12,6.8 M2,12 L2,14.5 L14,14.5 L14,12</Geometry>
+
+        <Style x:Key="ColumnHead" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- 웹하드처럼 둥근 네모 체크박스 -->
+        <Style x:Key="DriveCheck" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="Hit" Background="Transparent" Padding="4">
+                            <Border x:Name="Box" Width="18" Height="18" CornerRadius="4" BorderThickness="1.5"
+                                    BorderBrush="#B9C1BE" Background="White">
+                                <Grid>
+                                    <Path x:Name="Tick" Data="M3.5,9 L7.2,12.5 L14.5,5" Stroke="White" StrokeThickness="2"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                          Width="13" Height="13" Stretch="Uniform" Visibility="Collapsed"/>
+                                    <Rectangle x:Name="Dash" Width="9" Height="2" Fill="White" RadiusX="1" RadiusY="1"
+                                               Visibility="Collapsed"/>
+                                </Grid>
+                            </Border>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="{StaticResource Accent}"/>
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="{x:Null}">
+                                <Setter TargetName="Box" Property="Background" Value="{StaticResource Accent}"/>
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                <Setter TargetName="Dash" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Box" Property="Background" Value="#F2F4F3"/>
+                                <Setter TargetName="Box" Property="BorderBrush" Value="#DDE2E0"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 줄이는 동안 '쏙 줄이기' 자리에 보이는 멈추기 단추 -->
+        <Style x:Key="StopButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Body" CornerRadius="8" Background="#3A4048">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Body" Property="Background" Value="#23272C"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Body" Property="Background" Value="#8A9096"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- 줄마다 나오는 얇은 진행 막대 -->
+        <Style x:Key="ThinBar" TargetType="ProgressBar">
+            <Setter Property="Height" Value="6"/>
+            <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+            <Setter Property="Background" Value="#DCE6E2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Border x:Name="PART_Track" CornerRadius="3" Background="{TemplateBinding Background}"/>
+                            <Border x:Name="PART_Indicator" CornerRadius="3" Background="{TemplateBinding Foreground}"
+                                    HorizontalAlignment="Left"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 줄 끝 동그란 아이콘 단추 -->
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Body" CornerRadius="17" Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Body" Property="Background" Value="#D6EDE4"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Body" Property="Background" Value="#BFE2D4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18,14,18,10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ── 머리: 로고·이름 / 안전 안내 ───────────────────────── -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,14" LastChildFill="False">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                <Image Source="/Assets/logo.png" Width="30" Height="30" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <TextBlock Text="쏙" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Ink}"
+                           Margin="12,0,0,0" VerticalAlignment="Center"/>
+                <TextBlock Text="문서·사진 용량 줄이기" FontSize="15" Foreground="{StaticResource Muted}"
+                           Margin="10,3,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+            <Border DockPanel.Dock="Right" Background="{StaticResource AccentSoft}" CornerRadius="15"
+                    Padding="12,6" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <Path Data="M3,7 L3,4.8 A3,3 0 0 1 9,4.8 L9,7 M1.5,7 L10.5,7 L10.5,13 L1.5,13 Z"
+                          Stroke="{StaticResource AccentText}" StrokeThickness="1.4" Width="12" Height="14"
+                          Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="내 컴퓨터 안에서만 작업해요. 파일을 인터넷에 올리거나 다른 곳에 저장하지 않아요."
+                               FontSize="13" Foreground="{StaticResource AccentText}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </DockPanel>
+
+        <!-- ── 본문: 왼쪽 설정 / 오른쪽 파일 ─────────────────────── -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="360"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 왼쪽: 설정 -->
+            <Border Grid.Column="0" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}"
+                    BorderThickness="1" CornerRadius="10" Padding="20,18,20,18">
+                <DockPanel>
+                    <Button x:Name="StartButton" DockPanel.Dock="Bottom" Content="쏙 줄이기"
+                            Style="{StaticResource PrimaryButton}" Margin="0,12,0,0" Click="OnStart"/>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="SettingsPanel">
+                            <TextBlock Text="목표 용량" Style="{StaticResource SectionTitle}"/>
+
+                            <Border Background="{StaticResource Track}" CornerRadius="10" Padding="3">
+                                <UniformGrid Columns="2">
+                                    <RadioButton x:Name="PerFileMode" GroupName="Mode" Content="파일마다"
+                                                 Style="{StaticResource SegmentRadio}" IsChecked="True" Checked="OnModeChanged"/>
+                                    <RadioButton x:Name="CombinedMode" GroupName="Mode" Content="모두 합쳐서"
+                                                 Style="{StaticResource SegmentRadio}" Checked="OnModeChanged"/>
+                                </UniformGrid>
+                            </Border>
+                            <TextBlock x:Name="ModeHint" Style="{StaticResource Hint}" Margin="0,8,0,10"
+                                       Text="파일 하나하나를 이 용량 이하로 줄여요."/>
+
+                            <WrapPanel x:Name="Presets">
+                                <RadioButton GroupName="Preset" Content="500KB" Tag="0.5" Style="{StaticResource ChipRadio}" Checked="OnPreset"/>
+                                <RadioButton GroupName="Preset" Content="1MB" Tag="1" Style="{StaticResource ChipRadio}" Checked="OnPreset"/>
+                                <RadioButton GroupName="Preset" Content="2MB" Tag="2" Style="{StaticResource ChipRadio}" Checked="OnPreset"/>
+                                <RadioButton GroupName="Preset" Content="3MB" Tag="3" Style="{StaticResource ChipRadio}" Checked="OnPreset"/>
+                                <RadioButton GroupName="Preset" Content="5MB" Tag="5" Style="{StaticResource ChipRadio}" Checked="OnPreset"/>
+                                <RadioButton GroupName="Preset" Content="10MB" Tag="10" Style="{StaticResource ChipRadio}" Checked="OnPreset"/>
+                                <RadioButton GroupName="Preset" Content="20MB" Tag="20" Style="{StaticResource ChipRadio}" Checked="OnPreset"/>
+                                <RadioButton GroupName="Preset" Content="25MB" Tag="25" Style="{StaticResource ChipRadio}" Checked="OnPreset"/>
+                            </WrapPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <TextBlock Text="직접 입력" VerticalAlignment="Center" Foreground="{StaticResource Ink}"/>
+                                <TextBox x:Name="TargetBox" Width="64" Height="30" Margin="10,0,8,0" Padding="6,0"
+                                         VerticalContentAlignment="Center" FontSize="14"
+                                         BorderBrush="{StaticResource Line}" TextChanged="OnTargetChanged"/>
+                                <TextBlock Text="MB 이하" VerticalAlignment="Center" Foreground="{StaticResource Ink}"/>
+                            </StackPanel>
+                            <TextBlock x:Name="TargetError" Foreground="#C62828" FontSize="12.5" Margin="0,6,0,0"
+                                       TextWrapping="Wrap" Visibility="Collapsed"
+                                       Text="0.01~2000 사이 숫자로 적어 주세요. (예: 0.5, 3)"/>
+
+                            <Border Height="1" Background="{StaticResource Line}" Margin="0,12,0,12"/>
+
+                            <TextBlock Text="사진" Style="{StaticResource SectionTitle}"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="저장 형식" VerticalAlignment="Center" Foreground="{StaticResource Ink}"/>
+                                <ComboBox x:Name="PhotoFormatBox" Width="110" Height="30" Margin="10,0,0,0"
+                                          VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="OnOptionChanged">
+                                    <ComboBoxItem Content="원래대로"/>
+                                    <ComboBoxItem Content="JPG로"/>
+                                    <ComboBoxItem Content="PNG로"/>
+                                </ComboBox>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,8"
+                                       Text="HEIC(아이폰 사진)는 JPG로 저장돼요. 파일마다 따로 바꿀 수도 있어요."/>
+
+                            <CheckBox x:Name="RemoveLocationBox" IsChecked="True" Checked="OnOptionChanged" Unchecked="OnOptionChanged">
+                                <TextBlock Text="사진 속 위치정보 지우기"/>
+                            </CheckBox>
+                            <TextBlock Style="{StaticResource Hint}" Margin="22,1,0,10"
+                                       Text="휴대폰 사진에 남은 촬영 장소(GPS)를 지워요."/>
+
+                            <TextBlock Text="PDF" Style="{StaticResource SectionTitle}"/>
+                            <CheckBox x:Name="PdfGrayBox" Checked="OnOptionChanged" Unchecked="OnOptionChanged">
+                                <TextBlock Text="흑백으로 바꾸기"/>
+                            </CheckBox>
+                            <TextBlock Style="{StaticResource Hint}" Margin="22,1,0,8"
+                                       Text="그림을 흑백으로 바꿔 더 줄여요. 글자는 그대로예요."/>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0"
+                                       Text="PDF는 목표 용량에 맞추다 보면 글자 검색·복사가 안 될 수 있어요."/>
+
+                            <StackPanel x:Name="UpdateSection" Visibility="Collapsed" Margin="0,18,0,0">
+                                <TextBlock Text="업데이트" Style="{StaticResource SectionTitle}"/>
+                                <CheckBox x:Name="CheckUpdatesBox" IsChecked="True" Checked="OnUpdateOptionChanged" Unchecked="OnUpdateOptionChanged">
+                                    <TextBlock Text="새 버전이 나오면 알려 주기"/>
+                                </CheckBox>
+                                <TextBlock Style="{StaticResource Hint}" Margin="22,1,0,0"
+                                           Text="하루 한 번 새 버전이 있는지만 확인해요. 파일은 보내지 않아요."/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <!-- 오른쪽: 파일 -->
+            <Border Grid.Column="2" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}"
+                    BorderThickness="1" CornerRadius="10" Padding="12">
+                <Grid>
+                    <!-- 비어 있을 때: 끌어다 놓기 -->
+                    <Grid x:Name="EmptyState">
+                        <Rectangle x:Name="DropOutline" RadiusX="10" RadiusY="10" Fill="{StaticResource DropFill}"
+                                   Stroke="{StaticResource DropLine}" StrokeThickness="1.5" StrokeDashArray="4 3"/>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
+                            <Image Source="/Assets/logo.png" Width="56" Height="56" RenderOptions.BitmapScalingMode="HighQuality"/>
+                            <TextBlock Text="줄일 파일을 여기에 끌어다 놓으세요" FontSize="19" FontWeight="Bold"
+                                       Foreground="{StaticResource Ink}" HorizontalAlignment="Center" Margin="0,16,0,0"/>
+                            <TextBlock Text="여러 개를 한꺼번에 놓아도 돼요. 폴더째 놓으면 안의 파일을 모두 넣어요."
+                                       FontSize="14" Foreground="{StaticResource Body}" HorizontalAlignment="Center"
+                                       TextAlignment="Center" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">
+                                <Border Style="{StaticResource Badge}" BorderBrush="#D32F2F">
+                                    <TextBlock Text="PDF" FontSize="12.5" FontWeight="Bold" Foreground="#D32F2F"/>
+                                </Border>
+                                <Border Style="{StaticResource Badge}" BorderBrush="#2B63D6">
+                                    <TextBlock Text="한글" FontSize="12.5" FontWeight="Bold" Foreground="#2B63D6"/>
+                                </Border>
+                                <Border Style="{StaticResource Badge}" BorderBrush="#8A4FD0">
+                                    <TextBlock Text="사진" FontSize="12.5" FontWeight="Bold" Foreground="#8A4FD0"/>
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="pdf · hwp · hwpx · jpg · png · heic · webp · bmp" FontSize="13.5"
+                                       Foreground="{StaticResource Muted}" HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">
+                                <Button Content="파일 고르기" Style="{StaticResource OutlineButton}" Click="OnPickFiles"/>
+                                <Button Content="폴더 고르기" Style="{StaticResource OutlineButton}" Click="OnPickFolder"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- 파일이 있을 때: 웹하드 같은 목록 -->
+                    <DockPanel x:Name="ListState" Visibility="Collapsed">
+                        <DockPanel DockPanel.Dock="Top" Margin="4,2,4,10" LastChildFill="False">
+                            <TextBlock x:Name="ListTitle" DockPanel.Dock="Left" FontSize="15" FontWeight="Bold"
+                                       Foreground="{StaticResource Ink}" VerticalAlignment="Center"/>
+                            <Button x:Name="ClearButton" DockPanel.Dock="Right" Content="목록 비우기"
+                                    Style="{StaticResource LinkButton}" Click="OnClear"/>
+                            <Button x:Name="AddFolderButton" DockPanel.Dock="Right" Content="폴더 더하기"
+                                    Style="{StaticResource LinkButton}" Click="OnPickFolder"/>
+                            <Button x:Name="AddFilesButton" DockPanel.Dock="Right" Content="파일 더하기"
+                                    Style="{StaticResource LinkButton}" Click="OnPickFiles"/>
+                            <Button x:Name="ResetButton" DockPanel.Dock="Right" Content="초기화"
+                                    Style="{StaticResource LinkButton}" Click="OnReset" Visibility="Collapsed"
+                                    ToolTip="줄인 결과를 지우고 처음 상태로 돌려요. 목표 용량을 바꿔 다시 줄일 수 있어요."/>
+                            <Button x:Name="OpenFolderButton" DockPanel.Dock="Right" Content="저장한 폴더 열기"
+                                    Style="{StaticResource LinkButton}" Click="OnOpenFolder" Visibility="Collapsed"/>
+                        </DockPanel>
+
+                        <!-- 넣지 않은 파일이 있을 때 이유 안내 (이미 목록에 있음 · 열 수 없음) -->
+                        <TextBlock x:Name="AddNote" DockPanel.Dock="Top" Visibility="Collapsed"
+                                   FontSize="12.5" Foreground="{StaticResource AccentText}"
+                                   TextWrapping="Wrap" Margin="6,-4,6,8"/>
+
+                        <!-- 제목 줄: 전체 선택 · 이름 · 형식 · 크기 · 상태 -->
+                        <Border DockPanel.Dock="Top" Background="{StaticResource DropFill}" CornerRadius="8"
+                                Padding="6,7" Margin="0,0,0,2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="36"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="96"/>
+                                    <ColumnDefinition Width="160"/>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="118"/>
+                                </Grid.ColumnDefinitions>
+                                <CheckBox x:Name="SelectAllBox" Grid.Column="0" Style="{StaticResource DriveCheck}"
+                                          IsThreeState="False" Click="OnSelectAll"
+                                          ToolTip="다운로드할 수 있는 파일을 모두 고르거나 풀어요"/>
+                                <TextBlock Grid.Column="1" Text="이름" Style="{StaticResource ColumnHead}"/>
+                                <TextBlock Grid.Column="2" Text="저장 형식" Style="{StaticResource ColumnHead}" Margin="10,0,0,0"/>
+                                <TextBlock Grid.Column="3" Text="크기" Style="{StaticResource ColumnHead}" HorizontalAlignment="Right"/>
+                                <TextBlock Grid.Column="4" Text="상태" Style="{StaticResource ColumnHead}" HorizontalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- 아래: 요약 / 다운로드 -->
+                        <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0"
+                                Padding="4,12,0,0" Margin="0,10,0,0">
+                            <DockPanel LastChildFill="True">
+                                <Button x:Name="DownloadButton" DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}"
+                                        MinWidth="150" FontSize="15" Click="OnDownloadSelected">
+                                    <StackPanel Orientation="Horizontal" Margin="18,0">
+                                        <Path Data="{StaticResource DownloadIcon}" Stroke="White" StrokeThickness="1.8"
+                                              Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center"
+                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                                        <TextBlock x:Name="DownloadText" Text="다운로드" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock x:Name="Summary" FontSize="13" Foreground="{StaticResource Body}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock x:Name="SaveHint" FontSize="12.5" Margin="0,3,0,0"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <ListBox x:Name="FileList" BorderThickness="0" Background="Transparent"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Focusable" Value="False"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <ContentPresenter/>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border x:Name="Row" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1"
+                                            Padding="6,9" Background="Transparent" MouseLeftButtonUp="OnRowClick">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="36"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="96"/>
+                                                <ColumnDefinition Width="160"/>
+                                                <ColumnDefinition Width="130"/>
+                                                <ColumnDefinition Width="118"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <CheckBox Grid.Column="0" Style="{StaticResource DriveCheck}"
+                                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                      IsEnabled="{Binding CanSave}"
+                                                      ToolTip="다운로드할 파일로 고르기"/>
+
+                                            <Border Grid.Column="1" Style="{StaticResource Badge}" Margin="0,0,10,0"
+                                                    BorderBrush="{Binding BadgeBrush}" VerticalAlignment="Center" Width="44">
+                                                <TextBlock Text="{Binding Badge}" FontSize="12" FontWeight="Bold"
+                                                           Foreground="{Binding BadgeBrush}" HorizontalAlignment="Center"/>
+                                            </Border>
+
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource Ink}"
+                                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/>
+                                                <TextBlock Text="{Binding Message}" FontSize="12.5" Foreground="{StaticResource Muted}"
+                                                           TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                            </StackPanel>
+
+                                            <ComboBox Grid.Column="3" Width="88" Height="28" Margin="8,0,0,0"
+                                                      HorizontalAlignment="Left"
+                                                      VerticalAlignment="Center" VerticalContentAlignment="Center" FontSize="12.5"
+                                                      SelectedIndex="{Binding FormatChoice, Mode=TwoWay}"
+                                                      IsEnabled="{Binding CanEditFormat}"
+                                                      ToolTip="이 사진만 따로 저장 형식을 정해요">
+                                                <ComboBox.Style>
+                                                    <Style TargetType="ComboBox">
+                                                        <Setter Property="Visibility" Value="Hidden"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsPhoto}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ComboBox.Style>
+                                                <ComboBoxItem Content="기본 설정"/>
+                                                <ComboBoxItem Content="원래대로"/>
+                                                <ComboBoxItem Content="JPG로"/>
+                                                <ComboBoxItem Content="PNG로"/>
+                                            </ComboBox>
+
+                                            <!-- 크기: 116MB → 8.69MB (결과는 굵은 초록) -->
+                                            <TextBlock x:Name="SizePlain" Grid.Column="4" Text="{Binding OriginalText}" FontSize="13.5"
+                                                       Foreground="{StaticResource Body}" VerticalAlignment="Center" TextAlignment="Right"/>
+                                            <TextBlock x:Name="SizeResult" Grid.Column="4" FontSize="13.5" Visibility="Collapsed"
+                                                       VerticalAlignment="Center" TextAlignment="Right">
+                                                <Run Text="{Binding OriginalText, Mode=OneWay}" Foreground="{StaticResource Body}"/>
+                                                <Run Text=" → " Foreground="{StaticResource Muted}"/>
+                                                <Run Text="{Binding ResultText, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource AccentText}"/>
+                                            </TextBlock>
+
+                                            <!-- 상태: 알약 / 줄이는 중이면 퍼센트와 막대 -->
+                                            <Border x:Name="Pill" Grid.Column="5" CornerRadius="13" Padding="12,4" Margin="14,0,0,0"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    Background="{Binding StateSoftBrush}">
+                                                <TextBlock Text="{Binding StateText}" FontSize="13" FontWeight="Bold"
+                                                           Foreground="{Binding StateBrush}"/>
+                                            </Border>
+                                            <StackPanel x:Name="Working" Grid.Column="5" Margin="16,0,4,0" VerticalAlignment="Center"
+                                                        Visibility="Collapsed">
+                                                <TextBlock Text="{Binding ProgressText}" FontSize="13" FontWeight="Bold"
+                                                           Foreground="{StaticResource AccentText}" HorizontalAlignment="Right"/>
+                                                <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100"
+                                                             Style="{StaticResource ThinBar}" Margin="0,4,0,0"/>
+                                            </StackPanel>
+
+                                            <!-- 끝: 비교 · 다운로드 / 줄이는 중이면 ✕ -->
+                                            <StackPanel x:Name="Actions" Grid.Column="6" Orientation="Horizontal"
+                                                        HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Button x:Name="CompareBtn" Content="비교" Style="{StaticResource LinkButton}" Margin="0,0,4,0"
+                                                        FontSize="13.5" Click="OnCompare" ToolTip="원본과 나란히 비교"
+                                                        Visibility="{Binding CanCompare, Converter={StaticResource BoolToVis}}"/>
+                                                <Button x:Name="DownBtn" Style="{StaticResource IconButton}" Click="OnDownloadOne">
+                                                    <Button.ToolTip>
+                                                        <TextBlock Text="{Binding DownloadTip}"/>
+                                                    </Button.ToolTip>
+                                                    <Grid>
+                                                        <Path x:Name="DownIcon" Data="{StaticResource DownloadIcon}"
+                                                              Stroke="{StaticResource AccentText}" StrokeThickness="1.8"
+                                                              Width="16" Height="16" Stretch="Uniform"
+                                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                                                        <Path x:Name="DoneIcon" Data="M2,8.5 L6,12.5 L14,4" Visibility="Collapsed"
+                                                              Stroke="{StaticResource Muted}" StrokeThickness="1.8"
+                                                              Width="15" Height="15" Stretch="Uniform"
+                                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                                                    </Grid>
+                                                </Button>
+                                                <!-- 이 파일만 목록에서 빼기 (원본은 그대로) -->
+                                                <Button x:Name="RemoveBtn" Style="{StaticResource IconButton}" Click="OnRemoveOne"
+                                                        ToolTip="목록에서 빼기 (원본 파일은 그대로 있어요)">
+                                                    <Path Data="M3,3 L13,13 M13,3 L3,13" Stroke="{StaticResource Muted}" StrokeThickness="1.6"
+                                                          Width="11" Height="11" Stretch="Uniform"
+                                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                                </Button>
+                                            </StackPanel>
+                                            <Button x:Name="StopOne" Grid.Column="6" Style="{StaticResource IconButton}" HorizontalAlignment="Right"
+                                                    Click="OnCancelOne" ToolTip="이 파일만 멈추기" Visibility="Collapsed">
+                                                <Path Data="M3,3 L13,13 M13,3 L3,13" Stroke="{StaticResource Muted}" StrokeThickness="1.8"
+                                                      Width="13" Height="13" Stretch="Uniform" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Row" Property="Background" Value="#F6F8F7"/>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                            <Setter TargetName="Row" Property="Background" Value="{StaticResource AccentSoft}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Saved}" Value="True">
+                                            <Setter TargetName="DownIcon" Property="Visibility" Value="Collapsed"/>
+                                            <Setter TargetName="DoneIcon" Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding CanSave}" Value="False">
+                                            <Setter TargetName="DownBtn" Property="Visibility" Value="Hidden"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasResult}" Value="True">
+                                            <Setter TargetName="SizePlain" Property="Visibility" Value="Collapsed"/>
+                                            <Setter TargetName="SizeResult" Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsWorking}" Value="True">
+                                            <Setter TargetName="Pill" Property="Visibility" Value="Collapsed"/>
+                                            <Setter TargetName="Working" Property="Visibility" Value="Visible"/>
+                                            <Setter TargetName="Actions" Property="Visibility" Value="Collapsed"/>
+                                            <Setter TargetName="StopOne" Property="Visibility" Value="Visible"/>
+                                            <Setter TargetName="Row" Property="Background" Value="{StaticResource AccentSoft}"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ── 아래: 사용 전에 알아두세요 / 개인정보·라이선스 안내 · 버전 (항상 보임) ── -->
+        <Grid Grid.Row="2" Margin="0,8,0,0">
+            <Expander Foreground="{StaticResource Body}" FontSize="14">
+                <Expander.Header>
+                    <TextBlock Text="사용 전에 알아두세요" Foreground="{StaticResource Body}"/>
+                </Expander.Header>
+                <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                        CornerRadius="10" Padding="16,12" Margin="0,8,0,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Foreground="{StaticResource Body}"
+                                   Text="· 줄인 파일은 체크한 뒤 '다운로드'를 누르거나 줄 끝의 ⬇ 단추를 눌러 저장합니다. 여러 개는 ZIP 하나로 묶입니다. 원본은 그대로 남습니다."/>
+                        <TextBlock Style="{StaticResource Hint}" Foreground="{StaticResource Body}" Margin="0,4,0,0"
+                                   Text="· 문서는 목표 용량에 맞게 줄입니다. PDF는 줄인 뒤 글자 검색·복사가 안 될 수 있습니다."/>
+                        <TextBlock Style="{StaticResource Hint}" Foreground="{StaticResource Body}" Margin="0,4,0,0"
+                                   Text="· 암호가 걸린 문서, 배포용 문서, 전자서명이 들어간 문서는 변경하지 않습니다."/>
+                        <TextBlock Style="{StaticResource Hint}" Foreground="{StaticResource Body}" Margin="0,4,0,0"
+                                   Text="· 제출하기 전에 줄인 파일을 꼭 한 번 열어 확인해 주세요."/>
+                    </StackPanel>
+                </Border>
+            </Expander>
+            <!-- 펼침 단추보다 위에 놓아 항상 눌리도록 뒤에 둔다 -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,3,2,0">
+                <Button Content="개인정보·라이선스 안내" Style="{StaticResource LinkButton}" Margin="0"
+                        FontSize="14" Click="OnAbout"/>
+                <TextBlock Text="·" Foreground="{StaticResource Muted}" Margin="10,0" VerticalAlignment="Center"/>
+                <TextBlock x:Name="VersionText" FontSize="14" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                <Button x:Name="UpdateButton" Style="{StaticResource LinkButton}" FontSize="14" FontWeight="Bold"
+                        Margin="12,0,0,0" Visibility="Collapsed" Click="OnUpdate"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

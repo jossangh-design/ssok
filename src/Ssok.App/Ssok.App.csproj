@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- 윈도우 10 이상에 내장된 PDF 렌더러(Windows.Data.Pdf)를 쓰려고 윈도우 SDK 버전을 지정한다 -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Ssok</AssemblyName>
+    <RootNamespace>Ssok.App</RootNamespace>
+
+    <Version>0.4.0</Version>
+    <Product>쏙</Product>
+    <AssemblyTitle>쏙 - 문서·사진 용량 줄이기</AssemblyTitle>
+    <Company>Ssok contributors</Company>
+    <Copyright>Copyright (c) 2026 Ssok contributors. MIT License.</Copyright>
+
+    <!-- 관리자 권한 없이 실행 (설계서: 권한 최소화) -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\ssok.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\logo.png" />
+    <Resource Include="Assets\ssok.ico" />
+  </ItemGroup>
+
+  <!-- 업데이트 확인용 저장소와 공개 키. 공식 배포(GitHub Actions)에서만 채워진다.
+       비어 있으면(직접 빌드) 쏙은 업데이트를 확인하지 않는다. -->
+  <ItemGroup>
+    <AssemblyMetadata Include="SsokUpdateRepo" Value="$(SsokUpdateRepo)" />
+    <AssemblyMetadata Include="SsokUpdatePublicKey" Value="$(SsokUpdatePublicKey)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ssok.Core\Ssok.Core.csproj" />
+  </ItemGroup>
+
+</Project>
