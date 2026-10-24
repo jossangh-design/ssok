@@ -43,7 +43,8 @@
 
 1. `src\Ssok.App\Ssok.App.csproj`의 `<Version>`을 올립니다. (예: 0.4.0 → 0.4.1)
 2. `build.cmd`로 이 PC에서 먼저 만들어 보고 `BUILD-RESULT: OK`인지 확인합니다.
-3. GitHub에 올리고 `v0.4.1` 태그를 붙입니다. (Claude에게 "0.4.1 배포해 줘"라고 하면 됩니다.)
-4. 몇 분 뒤 저장소의 **Releases**에 설치판·무설치판이 올라옵니다.
+3. 바뀐 소스를 GitHub에 올립니다. (Claude에게 "올려 줘"라고 하면 됩니다.)
+4. 저장소의 **Releases → Draft a new release**에서 태그 `v0.4.1`을 새로 만들고 **Publish release**를 누릅니다.
+5. 몇 분 뒤 저장소의 **Releases**에 설치판·무설치판이 올라옵니다.
    - 이미 설치판을 쓰는 선생님은 쏙 오른쪽 아래에 **새 버전 받기**가 보입니다.
    - 처음 쓰시는 선생님께는 `https://github.com/계정이름/ssok/releases/latest` 주소를 알려 드리세요.

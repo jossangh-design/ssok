@@ -1,12 +1,12 @@
-# 쏙 공식 배포: v로 시작하는 태그(예: v0.4.0)를 올리면 자동으로 만들고 GitHub Releases에 올린다.
+# 쏙 공식 배포: GitHub에서 새 Release(태그 예: v0.4.0)를 Publish하면 자동으로 만들어 그 Release에 파일을 올린다.
 # 필요한 저장소 비밀값(Settings → Secrets and variables → Actions):
 #   SSOK_UPDATE_KEY  업데이트 서명용 비밀 키 (tools/make-update-key.cmd로 만든 것)
 # 코드 서명(SignPath)이 승인되면 저장소 변수 SIGNPATH_ORGANIZATION_ID와 비밀값 SIGNPATH_API_TOKEN을 넣는다.
 name: release
 
 on:
-  push:
-    tags: ['v*']
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       version:
@@ -31,7 +31,7 @@ jobs:
         id: ver
         shell: pwsh
         run: |
-          $v = if ('${{ github.ref_type }}' -eq 'tag') { '${{ github.ref_name }}'.TrimStart('v') } else { '${{ inputs.version }}' }
+          $v = if ('${{ github.event_name }}' -eq 'release') { '${{ github.event.release.tag_name }}'.TrimStart('v') } else { '${{ inputs.version }}' }
           if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "버전 형식이 아닙니다: $v" }
           "version=$v" >> $env:GITHUB_OUTPUT
 
@@ -126,14 +126,14 @@ jobs:
             Set-Content release\SHA256SUMS.txt -Encoding utf8
 
       - name: 시험 빌드 파일 올리기
-        if: github.ref_type != 'tag'
+        if: github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
           name: release-files
           path: release/
 
       - name: GitHub Releases에 올리기
-        if: github.ref_type == 'tag'
+        if: github.event_name == 'release'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -147,4 +147,6 @@ jobs:
 
           파일은 이 컴퓨터 안에서만 처리되며 인터넷으로 보내지 않습니다.
           "@
-          gh release create "v$v" (Get-ChildItem release -File).FullName --title "쏙 $v" --notes $notes
+          $tag = '${{ github.event.release.tag_name }}'
+          gh release upload $tag (Get-ChildItem release -File).FullName --clobber --repo ${{ github.repository }}
+          gh release edit $tag --title "쏙 $v" --notes $notes --repo ${{ github.repository }}
