@@ -52,5 +52,5 @@
 
 ## 남은 일
 
-- SignPath Foundation 무료 코드서명 신청 (DEPLOY.md 3번). 승인되면 저장소 변수 `SIGNPATH_ORGANIZATION_ID`, 비밀값 `SIGNPATH_API_TOKEN` 넣기. 지금 워크플로는 설치판만 서명 — 무설치판 속 Ssok.exe도 서명하려면 SignPath 아티팩트 설정과 워크플로 순서를 조정해야 한다.
+- SignPath Foundation 무료 코드서명: 2026-10-24 신청서 제출함 (jossangh@gmail.com으로 답 옴, 심사 대기). 승인되면 저장소 변수 `SIGNPATH_ORGANIZATION_ID`, 비밀값 `SIGNPATH_API_TOKEN` 넣기. 지금 워크플로는 설치판만 서명 — 무설치판 속 Ssok.exe도 서명하려면 SignPath 아티팩트 설정과 워크플로 순서를 조정해야 한다.
 - 속도 개선 후보(사용자에게 설명만 하고 보류 중): 여러 파일 동시 처리, PDF 크기 어림으로 qpdf 실행 횟수 줄이기, 문서 속 그림 병렬 압축, PDF 쪽 병렬 렌더링.
