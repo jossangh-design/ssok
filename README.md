@@ -75,13 +75,17 @@
 - 로그에 파일 이름·경로·문서 내용을 남기지 않는다.
 - MIT, Apache-2.0, BSD, MPL-2.0 라이선스 부품만 쓴다. AGPL·GPL 부품은 쓰지 않는다.
 
-## 코드 서명 정책
+## 코드 서명 정책 (Code signing policy)
 
 Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
 
-- 서명하는 파일은 이 저장소의 소스로 GitHub Actions에서 만든 배포 파일뿐입니다.
-- 저장소 관리자(committer·reviewer·approver): 이 저장소의 소유자
-- 개인정보: 쏙은 사용자가 고른 파일을 이 컴퓨터 안에서만 처리하며 인터넷으로 보내지 않습니다. 인터넷 연결은 새 버전 확인(하루 한 번, 끌 수 있음)과 사용자가 누른 업데이트 내려받기에만 씁니다. 자세한 내용은 쏙의 '개인정보·라이선스 안내'를 보세요.
+- 서명하는 파일은 이 저장소의 소스로 GitHub Actions에서 만든 배포 파일뿐이며, 배포할 때마다 승인자가 직접 승인합니다.
+- 역할 (Team roles)
+  - 작성자·검토자·승인자 (Committers, Reviewers, Approvers): [@jossangh-design](https://github.com/jossangh-design) (저장소 소유자)
+  - 외부 기여는 Pull Request로 받고, 소유자가 검토한 뒤에만 반영합니다.
+- 개인정보 (Privacy policy): 쏙은 사용자가 고른 파일을 이 컴퓨터 안에서만 처리하며, 파일·파일 이름·내용을 인터넷으로 보내지 않습니다. 인터넷 연결은 새 버전 확인(하루 한 번, 설정에서 끌 수 있음)과 사용자가 누른 업데이트 내려받기에만 쓰며, 둘 다 이 저장소의 GitHub Releases에서 받습니다 ([GitHub 개인정보 처리방침](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement)). 그 밖에는 사용자가 요청하지 않는 한 어떤 정보도 다른 시스템으로 보내지 않습니다.
+
+> **English summary** — Ssok processes the files a user selects only on the local computer and never uploads files, file names or contents. The only network access is a once-a-day update check (can be turned off in settings) and a user-initiated update download, both from this repository's GitHub Releases. This program will not transfer any other information to other networked systems unless specifically requested by the user. Only release files built by GitHub Actions from this public repository are signed, and every signing request is approved manually by the approver above.
 
 ## 라이선스
 
