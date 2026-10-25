@@ -19,7 +19,7 @@ a{color:#1A7A5E}a:hover{color:#145E48}
 details summary{cursor:pointer;list-style:none}
 details summary::-webkit-details-marker{display:none}
 details[open] .faq-plus{transform:rotate(45deg)}
-#policy::backdrop{background:rgba(31,35,40,0.35)}
+#policy::backdrop,#contact::backdrop{background:rgba(31,35,40,0.35)}
 </style>
 <style>html{scroll-behavior:smooth}</style>
 </head>
@@ -267,10 +267,22 @@ details[open] .faq-plus{transform:rotate(45deg)}
 </div>
 <div style="display: flex; gap: 18px; flex-wrap: wrap; align-items: center;">
 <button type="button" popovertarget="policy" style="padding: 4px 0; border: 0; background: none; font: inherit; line-height: inherit; color: #1A7A5E; text-decoration: underline; cursor: pointer;">개인정보·코드 서명 정책</button>
-<a href="mailto:jossangh@gmail.com?subject=%5B%EC%8F%99%5D%20%EB%AC%B8%EC%9D%98" style="padding: 4px 0;">문의·오류 알리기</a>
+<button type="button" popovertarget="contact" style="padding: 4px 0; border: 0; background: none; font: inherit; line-height: inherit; color: #1A7A5E; text-decoration: underline; cursor: pointer;">문의·오류 알리기</button>
 </div>
 </div>
 </footer>
+<div id="contact" popover style="max-width: 480px; width: calc(100% - 48px); box-sizing: border-box; margin: auto; padding: 28px; border: 1px solid #DDE2E0; border-radius: 16px; background: #FFFFFF; color: #3A4048; font-family: 'Noto Sans KR', 'Malgun Gothic', 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.6; word-break: keep-all; box-shadow: 0 24px 60px rgba(31,35,40,0.18);">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px;">
+<h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #1F2328;">문의·오류 알리기</h2>
+<button type="button" popovertarget="contact" popovertargetaction="hide" aria-label="닫기" style="width: 44px; height: 44px; border: 0; border-radius: 22px; background: #F2F4F3; color: #3A4048; font-size: 20px; cursor: pointer;">✕</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 16px;">
+<p style="margin: 0;">궁금한 점이나 잘 안 되는 부분이 있으면 아래 메일로 알려 주세요.</p>
+<div style="padding: 16px; background: #E6F4EE; border-radius: 12px; text-align: center; font-size: 20px; font-weight: 700; color: #1A7A5E; user-select: all;">jossangh@gmail.com</div>
+<p style="margin: 0; font-size: 14px; color: #6B727A;">오류를 알려 주실 때는 어떤 파일(한글·PDF·사진)에서, 목표 용량을 얼마로 했을 때 생겼는지 적어 주시면 빨리 고칠 수 있습니다.</p>
+<a class="btn-main" href="mailto:jossangh@gmail.com?subject=%5B%EC%8F%99%5D%20%EB%AC%B8%EC%9D%98" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 20px; background: #1F8A6B; color: #FFFFFF; text-decoration: none; border-radius: 10px; font-size: 16px; font-weight: 700;">메일 보내기</a>
+</div>
+</div>
 <div id="policy" popover style="max-width: 560px; width: calc(100% - 48px); box-sizing: border-box; margin: auto; padding: 28px; border: 1px solid #DDE2E0; border-radius: 16px; background: #FFFFFF; color: #3A4048; font-family: 'Noto Sans KR', 'Malgun Gothic', 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.6; word-break: keep-all; box-shadow: 0 24px 60px rgba(31,35,40,0.18);">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px;">
 <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #1F2328;">개인정보·코드 서명 정책</h2>
