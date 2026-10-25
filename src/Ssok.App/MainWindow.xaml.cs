@@ -965,17 +965,47 @@ public partial class MainWindow : Window
 
         long before = _items.Sum(i => i.OriginalBytes);
         long after = _items.Sum(i => i.ResultBytes ?? i.OriginalBytes);
-        var summary = done == 0
-            ? $"모두 {TargetSize.Format(before)}"
-            : $"{done}개 완료 · 모두 {TargetSize.Format(before)} → {TargetSize.Format(after)}";
+        var sizes = $"모두 {TargetSize.Format(before)} → {TargetSize.Format(after)}";
+        var summary = done == 0 ? $"모두 {TargetSize.Format(before)}" : $"{done}개 완료 · {sizes}";
+        bool groupMet = false;
+        Summary.Inlines.Clear();
         if (CombinedMode.IsChecked == true && targetOk && TryGetTargetMb(out var mb))
         {
             // 목표는 사용자가 적은 값 그대로 보여 주고, 비교는 여유를 둔 값(ZIP으로 묶을 때 늘어나는 양 포함)으로 한다.
             var shown = mb < 1 ? $"{mb * 1000:0.##}KB" : $"{mb.ToString("0.##", CultureInfo.InvariantCulture)}MB";
-            summary += after <= target - ZipReserve() || done == 0
-                ? $" · 목표 합계 {shown}"
-                : $" · 목표 합계 {shown}보다 큽니다. 목표를 조금 올려 보세요.";
+            long limit = target - ZipReserve();
+            // 다 끝났을 때만 결과를 말한다. 실패한 파일이 있으면 합계가 맞아도 제출할 파일이 다 모이지 않았다.
+            bool allDone = !_busy && done > 0
+                && _items.All(i => !FileKinds.IsReadyNow(i.Kind) || i.State is ItemState.Done or ItemState.Partial or ItemState.Skipped);
+            if (allDone && after <= limit)
+            {
+                groupMet = true;
+                int pct = before > 0 ? (int)Math.Round(100.0 * (before - after) / before) : 0;
+                AddSummary($"✓ 목표 {shown} 안에 맞췄습니다", FileItem.OkBrush);
+                AddSummary($" · {sizes} ({pct}% 줄임)", null);
+            }
+            else if (allDone)
+            {
+                AddSummary($"목표 {shown}에 맞추려면 {TargetSize.Format(after - limit)} 더 줄여야 합니다", FileItem.WarnBrush);
+                AddSummary($" · {sizes}. 목표를 조금 올려 보세요.", null);
+            }
+            else
+            {
+                Summary.Text = summary + $" · 목표 합계 {shown}";
+            }
         }
-        Summary.Text = summary;
+        else
+        {
+            Summary.Text = summary;
+        }
+        foreach (var item in _items) item.GroupMet = groupMet;
+    }
+
+    /// <summary>아래 요약 줄에 글을 덧붙인다. 색을 주면 굵게.</summary>
+    private void AddSummary(string text, System.Windows.Media.Brush? emphasis)
+    {
+        var run = new System.Windows.Documents.Run(text);
+        if (emphasis is not null) { run.Foreground = emphasis; run.FontWeight = FontWeights.SemiBold; }
+        Summary.Inlines.Add(run);
     }
 }

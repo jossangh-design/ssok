@@ -128,6 +128,22 @@ internal static class SelfTest
                       $"{a.ResultBytes} {a.Message} / {b.ResultBytes} {b.Message}");
             });
 
+            // 1-0-3) "모두 합쳐서" 합계를 맞췄으면 몫을 못 채운 파일도 완료(초록)로, 아니면 목표 미달로 보여 준다.
+            Guard("group-met", () =>
+            {
+                var path = Path.Combine(work, "group.jpg");
+                File.WriteAllBytes(path, MakePhoto(400, 300));
+                var item = new FileItem(path) { ResultBytes = 1000, Message = "그림 3개 · 64px" + FileItem.OverShareNote };
+                item.State = ItemState.Partial;
+                Check("합계 못 맞추면 목표 미달", item.StateText.StartsWith("목표 미달") && item.Message.Contains(FileItem.OverShareNote),
+                      $"{item.StateText} / {item.Message}");
+                item.GroupMet = true;
+                Check("합계 맞추면 완료", item.StateText.StartsWith("완료") && item.StateBrush == FileItem.OkBrush
+                      && item.Message == "그림 3개 · 64px", $"{item.StateText} / {item.Message}");
+                item.ResetResult();
+                Check("다시 줄이면 처음으로", !item.GroupMet && item.StateText == "대기", item.StateText);
+            });
+
             // 1-1) 화면과 같은 흐름: 보관 폴더에 줄여 두고 → 저장 단추로 고른 폴더와 ZIP에 저장
             Guard("hold-and-save", () =>
             {

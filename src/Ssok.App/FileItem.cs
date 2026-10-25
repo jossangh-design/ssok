@@ -14,8 +14,8 @@ internal sealed class FileItem : INotifyPropertyChanged
     private static readonly Brush HangulBrush = Freeze(new SolidColorBrush(Color.FromRgb(0x2B, 0x63, 0xD6)));
     private static readonly Brush PhotoBrush = Freeze(new SolidColorBrush(Color.FromRgb(0x8A, 0x4F, 0xD0)));
     private static readonly Brush MutedBrush = Freeze(new SolidColorBrush(Color.FromRgb(0x6B, 0x72, 0x7A)));
-    private static readonly Brush OkBrush = Freeze(new SolidColorBrush(Color.FromRgb(0x1F, 0x8A, 0x6B)));
-    private static readonly Brush WarnBrush = Freeze(new SolidColorBrush(Color.FromRgb(0xB4, 0x6A, 0x00)));
+    internal static readonly Brush OkBrush = Freeze(new SolidColorBrush(Color.FromRgb(0x1F, 0x8A, 0x6B)));
+    internal static readonly Brush WarnBrush = Freeze(new SolidColorBrush(Color.FromRgb(0xB4, 0x6A, 0x00)));
     private static readonly Brush ErrorBrush = Freeze(new SolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28)));
 
     private static readonly Brush OkSoft = Freeze(new SolidColorBrush(Color.FromRgb(0xE6, 0xF4, 0xEE)));
@@ -108,6 +108,25 @@ internal sealed class FileItem : INotifyPropertyChanged
     /// <summary>화질을 크게 낮추면 목표에 맞출 수도 있는지 (마지막으로 줄인 결과 기준).</summary>
     public bool CanForce { get; set; }
 
+    /// <summary>파일 하나의 몫은 못 채웠을 때 붙는 말. "모두 합쳐서" 목표를 맞췄으면 숨긴다.</summary>
+    public const string OverShareNote = " · 가장 작게 줄여도 목표 초과";
+
+    private bool _groupMet;
+    /// <summary>"모두 합쳐서" 합계가 목표 안에 들었는지. 그러면 목표 미달인 파일도 완료로 보여 준다.</summary>
+    public bool GroupMet
+    {
+        get => _groupMet;
+        set
+        {
+            if (_groupMet == value) return;
+            _groupMet = value;
+            Raise(nameof(Message)); Raise(nameof(StateBrush)); RaiseResult();
+        }
+    }
+
+    /// <summary>화면에서 완료로 보여 줄지 (목표 미달이어도 합계를 맞췄으면 완료).</summary>
+    private bool LooksDone => _state == ItemState.Done || _state == ItemState.Partial && _groupMet;
+
     private string? _saveSource;
     /// <summary>다운로드할 때 내보낼 파일 (줄인 결과, 또는 이미 작아서 그대로 쓸 원본).</summary>
     public string? SaveSource
@@ -149,6 +168,7 @@ internal sealed class FileItem : INotifyPropertyChanged
         if (!FileKinds.IsReadyNow(Kind)) return;
         ResultPath = null;
         CanForce = false;
+        GroupMet = false;
         SaveSource = null;
         SaveName = null;
         Saved = false;
@@ -193,19 +213,19 @@ internal sealed class FileItem : INotifyPropertyChanged
     public bool CanEditFormat => IsPhoto && _state is ItemState.Waiting or ItemState.Failed;
 
     /// <summary>상태 알약: "완료 92%↓", "목표 미달 52%↓", "그대로", "실패" …</summary>
-    public string StateText => _state switch
+    public string StateText => LooksDone
+        ? (ReducedPercent > 0 ? $"완료 {ReducedPercent}%↓" : "완료")
+        : _state switch
     {
         ItemState.Waiting => "대기",
         ItemState.Working => "줄이는 중",
-        ItemState.Done => ReducedPercent > 0 ? $"완료 {ReducedPercent}%↓" : "완료",
         ItemState.Partial => ReducedPercent > 0 ? $"목표 미달 {ReducedPercent}%↓" : "목표 미달",
         ItemState.Skipped => CanSave ? "그대로" : "건너뜀",
         _ => "실패",
     };
 
-    public Brush StateSoftBrush => _state switch
+    public Brush StateSoftBrush => LooksDone ? OkSoft : _state switch
     {
-        ItemState.Done => OkSoft,
         ItemState.Partial => WarnSoft,
         ItemState.Failed => ErrorSoft,
         _ => MutedSoft,
@@ -217,9 +237,8 @@ internal sealed class FileItem : INotifyPropertyChanged
         Raise(nameof(ReducedPercent)); Raise(nameof(StateText)); Raise(nameof(StateSoftBrush)); Raise(nameof(CanCompare));
     }
 
-    public Brush StateBrush => _state switch
+    public Brush StateBrush => LooksDone ? OkBrush : _state switch
     {
-        ItemState.Done => OkBrush,
         ItemState.Partial => WarnBrush,
         ItemState.Failed => ErrorBrush,
         _ => MutedBrush,
@@ -228,7 +247,7 @@ internal sealed class FileItem : INotifyPropertyChanged
     private string _message = "";
     public string Message
     {
-        get => _message;
+        get => _groupMet ? _message.Replace(OverShareNote, "") : _message;
         set { _message = value; Raise(); }
     }
 

@@ -246,7 +246,7 @@ internal static class ImageWork
                 AppLog.Info($"pdf-pages dpi={page.Dpi} quality={page.Quality} reached={page.Reached}");
                 return page.Reached
                     ? new WorkOutcome(WorkResult.Done, page.Data.Length, saved, detail)
-                    : new WorkOutcome(WorkResult.Partial, page.Data.Length, saved, detail + " · 가장 작게 줄여도 목표 초과")
+                    : new WorkOutcome(WorkResult.Partial, page.Data.Length, saved, detail + FileItem.OverShareNote)
                         { CanForce = !options.Force };
             }
         }
@@ -262,7 +262,7 @@ internal static class ImageWork
             case DocShrinkStatus.BestEffort:
             {
                 var saved = SafeOutput.Write(path, r.Data!, null, outputDir);
-                return new WorkOutcome(WorkResult.Partial, r.Data!.Length, saved, what + " · 가장 작게 줄여도 목표 초과")
+                return new WorkOutcome(WorkResult.Partial, r.Data!.Length, saved, what + FileItem.OverShareNote)
                     { PreviewBefore = previewBefore, PreviewAfter = previewAfter, CanForce = !options.Force };
             }
             default:
