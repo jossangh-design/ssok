@@ -9,6 +9,15 @@ public static partial class TargetSize
     public const long MinBytes = 10 * 1024;          // 10KB 미만은 의미 없는 결과가 나오므로 막는다.
     public const long MaxBytes = 2L * 1024 * 1024 * 1024;
 
+    /// <summary>
+    /// 제출 시스템은 1MB를 1,000,000바이트로 세기도 하고 1,048,576바이트로 세기도 한다.
+    /// 어느 쪽으로 세도 걸리지 않게 1,000,000바이트 기준에서 2% 더 작게 맞춘다.
+    /// </summary>
+    public const double SafetyFactor = 0.98;
+
+    /// <summary>화면에 적은 MB 값을 실제로 맞출 바이트로 바꾼다. 예: 10MB → 9,800,000바이트.</summary>
+    public static long SafeBytesFromMb(double mb) => (long)Math.Floor(mb * 1_000_000 * SafetyFactor);
+
     [GeneratedRegex(@"^\s*(?<n>\d+(?:[.,]\d+)?)\s*(?<u>kb|k|mb|m|gb|g|b)?\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex Pattern();
 

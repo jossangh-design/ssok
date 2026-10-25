@@ -10,16 +10,16 @@ namespace Ssok.Core.Documents;
 /// 1) qpdf --json-output 으로 객체 목록과 스트림 데이터를 임시 폴더에 꺼낸다.
 /// 2) JPEG 그림과 압축 안 된 8비트 RGB·흑백 그림을 찾는다.
 /// 3) 바꾼 그림만 담은 JSON을 qpdf --update-from-json 으로 적용해 새 PDF를 쓴다.
-/// 암호가 걸린 PDF, CMYK·특수 색 공간 그림은 건드리지 않는다.
+/// 암호가 걸린 PDF, CMYK·특수 색 공간 그림, 다른 그림의 투명 마스크는 건드리지 않는다.
 /// </summary>
 public sealed class PdfPackage : IDocumentPackage
 {
-    private static readonly TimeSpan QpdfTimeout = TimeSpan.FromMinutes(3);
     private const int MinRawPixels = 300 * 300; // 작은 아이콘·로고는 그대로 둔다 (선명함 유지)
 
     private readonly string _qpdf;
     private readonly string _workDir;
     private readonly string _inputPath;
+    private readonly TimeSpan _timeout;
     private readonly Dictionary<string, JsonObject> _dicts = new();
     private readonly List<DocImage> _images = new();
     private int _buildCounter;
@@ -28,10 +28,19 @@ public sealed class PdfPackage : IDocumentPackage
     public IReadOnlyList<DocImage> Images => _images;
 
     /// <param name="qpdfPath">qpdf 실행 파일 경로</param>
+    /// <summary>
+    /// qpdf 한 번에 기다리는 시간. 큰 스캔 PDF도 끝낼 수 있게 크기에 따라 늘린다
+    /// (3분 + 20MB마다 1분, 최대 30분). 그 사이에도 '멈추기'를 누르면 바로 멈춘다.
+    /// </summary>
+    public static TimeSpan TimeoutFor(long fileBytes)
+        => TimeSpan.FromMinutes(Math.Clamp(3 + fileBytes / (20L * 1024 * 1024), 3, 30));
+
     /// <param name="tempRoot">임시 작업 폴더를 만들 곳 (보통 %TEMP%\Ssok)</param>
-    public PdfPackage(byte[] fileBytes, string qpdfPath, string tempRoot)
+    /// <param name="cancel">'멈추기'를 누르면 qpdf를 끄고 멈춘다.</param>
+    public PdfPackage(byte[] fileBytes, string qpdfPath, string tempRoot, CancellationToken cancel = default)
     {
         OriginalSize = fileBytes.LongLength;
+        _timeout = TimeoutFor(fileBytes.LongLength);
         _qpdf = qpdfPath;
         if (!File.Exists(_qpdf))
             throw new DocumentNotSupportedException("PDF 처리 부품(qpdf)을 찾을 수 없어요. 쏙을 다시 설치해 주세요.");
@@ -44,13 +53,13 @@ public sealed class PdfPackage : IDocumentPackage
             File.WriteAllBytes(_inputPath, fileBytes);
 
             // 종료 코드 0 = 암호 있음, 2 = 없음
-            var enc = Run("--is-encrypted", _inputPath);
+            var enc = Run(cancel, "--is-encrypted", _inputPath);
             if (enc.ExitCode == 0)
                 throw new DocumentNotSupportedException("암호가 걸린 PDF는 바꾸지 않아요.");
 
             var jsonPath = Path.Combine(_workDir, "objects.json");
             var streamPrefix = Path.Combine(_workDir, "s");
-            var r = Run("--json-output=2", "--json-stream-data=file", $"--json-stream-prefix={streamPrefix}",
+            var r = Run(cancel, "--json-output=2", "--json-stream-data=file", $"--json-stream-prefix={streamPrefix}",
                         "--decode-level=generalized", _inputPath, jsonPath);
             if (r.ExitCode is not (0 or 3))
                 throw new DocumentNotSupportedException("PDF가 깨졌거나 읽을 수 없는 형식이에요.");
@@ -71,8 +80,19 @@ public sealed class PdfPackage : IDocumentPackage
         var objects = root?["qpdf"]?[1] as JsonObject
                       ?? throw new DocumentNotSupportedException("PDF 구조를 읽지 못했어요.");
 
+        // 다른 그림의 투명 마스크(/SMask)·마스크(/Mask)로 쓰이는 그림은 그대로 둔다.
+        // JPEG으로 바꾸면 경계가 번져 로고·도장 가장자리가 지저분해진다.
+        var masks = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (_, value) in objects)
+        {
+            if (value?["stream"]?["dict"] is not JsonObject d) continue;
+            foreach (var k in new[] { "/SMask", "/Mask" })
+                if (Str(d[k]) is { } r && r.EndsWith(" R")) masks.Add("obj:" + r);
+        }
+
         foreach (var (key, value) in objects)
         {
+            if (masks.Contains(key)) continue;
             if (value?["stream"] is not JsonObject stream || stream["dict"] is not JsonObject dict) continue;
             if (Str(dict["/Subtype"]) != "/Image") continue;
             if (dict.ContainsKey("/ImageMask") || dict.ContainsKey("/Decode") || dict.ContainsKey("/SMaskInData")) continue;
@@ -115,7 +135,7 @@ public sealed class PdfPackage : IDocumentPackage
         }
     }
 
-    public byte[] Build(IReadOnlyDictionary<string, RecodedImage> replacements)
+    public byte[] Build(IReadOnlyDictionary<string, RecodedImage> replacements, CancellationToken cancel = default)
     {
         int n = Interlocked.Increment(ref _buildCounter);
         var dir = Path.Combine(_workDir, "build" + n);
@@ -153,7 +173,7 @@ public sealed class PdfPackage : IDocumentPackage
         File.WriteAllText(updatePath, doc.ToJsonString(), new UTF8Encoding(false));
 
         var outPath = Path.Combine(dir, "out.pdf");
-        var r = Run(_inputPath, $"--update-from-json={updatePath}",
+        var r = Run(cancel, _inputPath, $"--update-from-json={updatePath}",
                     "--object-streams=generate", "--compress-streams=y", outPath);
         if (r.ExitCode is not (0 or 3) || !File.Exists(outPath))
             throw new IOException("qpdf 실행 실패 (exit " + r.ExitCode + ")");
@@ -204,8 +224,9 @@ public sealed class PdfPackage : IDocumentPackage
         return 0;
     }
 
-    private (int ExitCode, string Output) Run(params string[] args)
+    private (int ExitCode, string Output) Run(CancellationToken cancel, params string[] args)
     {
+        cancel.ThrowIfCancellationRequested();
         var psi = new ProcessStartInfo(_qpdf)
         {
             UseShellExecute = false,
@@ -219,9 +240,14 @@ public sealed class PdfPackage : IDocumentPackage
         using var p = Process.Start(psi) ?? throw new IOException("qpdf를 시작하지 못했습니다.");
         var stdout = p.StandardOutput.ReadToEndAsync();
         var stderr = p.StandardError.ReadToEndAsync();
-        if (!p.WaitForExit(QpdfTimeout))
+        // 조금씩 기다리면서 '멈추기'와 시간 제한을 확인한다.
+        var waited = Stopwatch.StartNew();
+        while (!p.WaitForExit(200))
         {
+            if (!cancel.IsCancellationRequested && waited.Elapsed < _timeout) continue;
             try { p.Kill(entireProcessTree: true); } catch { }
+            try { p.WaitForExit(5000); } catch { } // 임시 파일을 지울 수 있게 끝날 때까지 잠깐 기다린다
+            cancel.ThrowIfCancellationRequested();
             throw new DocumentNotSupportedException("PDF 처리 시간이 너무 오래 걸려서 멈췄어요.");
         }
         p.WaitForExit();

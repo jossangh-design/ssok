@@ -77,6 +77,15 @@ Console.WriteLine("[목표 용량 찾기]");
     Check("목표가 클수록 결과도 큼", s3 > s2 && s2 > s1, $"{s1},{s2},{s3}");
     Check("넉넉하면 목표에 가깝게", s3 > 3 * 1024 * 1024 * 0.9, $"{s3}");
 }
+{
+    // 품질 상한 95: 95보다 높은 품질로는 저장하지 않는다. 목표가 넉넉하면 95로 저장한다.
+    var img = new FakeImage(4000, 3000, lossy: true, bytesPerPixelAt100: 0.3);
+    var r = SizeSearch.Find(img, 50_000_000, new ShrinkOptions { TargetBytes = 40_000_000 });
+    Check("품질은 95까지만", img.Log.All(x => x.Quality <= 95) && r.Quality == 95, $"q={r.Quality}");
+    var tight = new FakeImage(4000, 3000, lossy: true, bytesPerPixelAt100: 0.3);
+    SizeSearch.Find(tight, 4_000_000, new ShrinkOptions { TargetBytes = 2 * 1024 * 1024 });
+    Check("품질을 찾을 때도 95를 넘지 않음", tight.Log.All(x => x.Quality <= 95));
+}
 
 Console.WriteLine("[결과 파일 저장]");
 {
@@ -183,6 +192,33 @@ Console.WriteLine("[모두 합쳐서 나누기]");
     var t3 = TargetPlanner.Split(10_000_000, new long[] { 2_000_000, 3_000_000 });
     Check("모두 작으면 그대로", t3[0] == 2_000_000 && t3[1] == 3_000_000);
 }
+Console.WriteLine("[목표 여유]");
+{
+    long safe10 = TargetSize.SafeBytesFromMb(10);
+    Check("10MB는 9,800,000바이트로 맞춤", safe10 == 9_800_000, $"{safe10}");
+    Check("어느 방식으로 세도 10MB 이하", safe10 < 10_000_000 && safe10 < 10L * 1024 * 1024);
+    Check("0.5MB(500KB)는 490,000바이트", TargetSize.SafeBytesFromMb(0.5) == 490_000, $"{TargetSize.SafeBytesFromMb(0.5)}");
+
+    // 실제로 ZIP(압축 안 함)을 만들어, 어림한 양이 진짜로 늘어난 양 이상인지 확인한다.
+    var names = new[] { "학급 사진_쏙.jpg", "가정통신문(3월) 최종_쏙.hwp", "report_쏙.pdf", "가정통신문(3월) 최종_쏙(2).hwp" };
+    var sizes = new[] { 300_000, 1_200_000, 55_555, 7 };
+    using var zms = new MemoryStream();
+    using (var zip = new ZipArchive(zms, ZipArchiveMode.Create, leaveOpen: true))
+    {
+        for (int i = 0; i < names.Length; i++)
+        {
+            var data = new byte[sizes[i]];
+            Random.Shared.NextBytes(data);
+            using var s = zip.CreateEntry(names[i], CompressionLevel.NoCompression).Open();
+            s.Write(data);
+        }
+    }
+    long grown = zms.Length - sizes.Sum();
+    long planned = TargetPlanner.ZipOverhead(names);
+    Check("ZIP으로 늘어나는 양을 넉넉히 어림", grown > 0 && grown <= planned, $"실제 {grown} · 어림 {planned}");
+    Check("어림이 지나치게 크지 않음 (1KB 이내)", planned - grown < 1024, $"실제 {grown} · 어림 {planned}");
+}
+
 Console.WriteLine("[파일 종류]");
 Check("heic는 사진", FileKinds.IsPhoto(FileKinds.Detect("a.HEIC")) && FileKinds.Detect("b.webp") == FileKind.Webp);
 Check("hwpx는 한글", FileKinds.Group(FileKinds.Detect("c.hwpx")) == FileGroup.Hangul);
@@ -201,6 +237,50 @@ Console.WriteLine("[문서: 단계 찾기]");
     var hard = DocumentShrinker.Shrink(new FakePackage(900_000, 2, 50_000), new FakeRecoder(), 300_000);
     Check("글자가 대부분이면 BestEffort", hard.Status == DocShrinkStatus.BestEffort && hard.Data!.Length < 1_000_000 && hard.Data!.Length > 300_000, $"{hard.Status}");
 }
+
+Console.WriteLine("[문서: 큰 그림부터 줄이기]");
+{
+    Check("몫이 작을수록 약하게 줄임", DocumentShrinker.LighterBy(1, 100) == 3 && DocumentShrinker.LighterBy(4, 100) == 2
+          && DocumentShrinker.LighterBy(10, 100) == 1 && DocumentShrinker.LighterBy(50, 100) == 0);
+    // 큰 사진 하나 + 작은 도표 셋: 같은 결과 안에서 작은 그림은 덜 줄인다.
+    var pkg = new SizedPackage(20_000, new[] { 900_000, 10_000, 10_000, 10_000 });
+    var r = DocumentShrinker.Shrink(pkg, new FakeRecoder(), 400_000);
+    double Ratio(string key) => (double)r.Replacements![key].Data.Length / pkg.Images.First(i => i.Key == key).Data.Length;
+    Check("큰 그림 목표 맞춤", r.Status == DocShrinkStatus.Done && r.Data!.Length <= 400_000, $"{r.Status} {r.Data?.Length}");
+    Check("작은 그림은 덜 줄임", r.Replacements is not null && Ratio("i1") > Ratio("i0"),
+          r.Replacements is null ? "" : $"{Ratio("i1"):0.###} vs {Ratio("i0"):0.###}");
+    // 가장 센 단계에서는 모두 똑같이 줄이므로, 맞출 수 있는 가장 작은 크기는 그대로다.
+    var tight = DocumentShrinker.Shrink(pkg, new FakeRecoder(), 1);
+    var uniform = DocumentShrinker.Ladder[^1];
+    long expected = 20_000 + pkg.Images.Sum(i => (long)new FakeRecoder().Recode(i, uniform.MaxLongSide, uniform.Quality)!.Data.Length);
+    Check("가장 작게 줄인 크기는 그대로", tight.Status == DocShrinkStatus.BestEffort && tight.Data!.Length == expected,
+          $"{tight.Data?.Length} vs {expected}");
+}
+
+Console.WriteLine("[알아보기 어려워도 줄이기]");
+{
+    var pkg = new FakePackage(10_000, 4, 1_000_000);
+    var normal = DocumentShrinker.Shrink(pkg, new FakeRecoder(), 60_000);
+    Check("문서: 평소 단계로는 목표 미달", normal.Status == DocShrinkStatus.BestEffort, $"{normal.Status}");
+    var forced = DocumentShrinker.Shrink(pkg, new FakeRecoder(), 60_000, force: true);
+    Check("문서: 고르면 목표에 맞춤", forced.Status == DocShrinkStatus.Done && forced.Data!.Length <= 60_000 && forced.MaxLongSide < 320,
+          $"{forced.Status} {forced.Data?.Length} {forced.MaxLongSide}px");
+
+    long SizeAt(int level) => 100_000_000L / (level + 1);
+    var page = RasterSearch.Find(l => new byte[SizeAt(l) / 10_000], 600);
+    Check("PDF 쪽 그림: 평소 단계로는 목표 미달", !page.Reached);
+    var pageForced = RasterSearch.Find(l => new byte[SizeAt(l) / 10_000], 600, null, default, RasterSearch.LadderFor(true));
+    Check("PDF 쪽 그림: 고르면 목표에 맞춤", pageForced.Reached && pageForced.Level >= RasterSearch.Ladder.Count, $"level={pageForced.Level}");
+
+    var img = new FakeImage(4000, 3000, lossy: true, bytesPerPixelAt100: 0.5);
+    var photo = SizeSearch.Find(img, 6_000_000, new ShrinkOptions { TargetBytes = 10 * 1024, MinQuality = 10, MinShortSidePx = 16 });
+    Check("사진: 고르면 목표에 맞춤", photo.Status == ShrinkStatus.Done && photo.Data!.Length <= 10 * 1024, $"{photo.Status}");
+}
+
+Console.WriteLine("[PDF 시간 제한]");
+Check("작은 PDF는 3분", PdfPackage.TimeoutFor(1024 * 1024) == TimeSpan.FromMinutes(3));
+Check("200MB PDF는 13분", PdfPackage.TimeoutFor(200L * 1024 * 1024) == TimeSpan.FromMinutes(13));
+Check("아주 커도 30분까지", PdfPackage.TimeoutFor(3L * 1024 * 1024 * 1024) == TimeSpan.FromMinutes(30));
 
 var fixtures = TestUtil.FindFixtures();
 Console.WriteLine("[문서: hwpx]");
@@ -227,6 +307,21 @@ Console.WriteLine("[문서: hwpx]");
         z.CreateEntry("../evil.txt").Open().Dispose();
     }
     Check("이상한 경로 거부", TestUtil.Throws<DocumentNotSupportedException>(() => new HwpxPackage(ms.ToArray())));
+}
+{
+    // 전자서명·암호 hwpx는 바꾸지 않는다 (서명이 깨지거나 문서가 안 열리므로).
+    var sample = File.ReadAllBytes(Path.Combine(fixtures, "sample.hwpx"));
+    var utf8 = System.Text.Encoding.UTF8;
+    var signed = TestUtil.ZipWith(sample, "META-INF/signatures.xml", utf8.GetBytes("<signatures/>"));
+    Check("전자서명 hwpx 거부", TestUtil.Throws<DocumentNotSupportedException>(() => new HwpxPackage(signed)));
+    var encrypted = TestUtil.ZipWith(sample, "META-INF/manifest.xml", utf8.GetBytes(
+        "<odf:manifest xmlns:odf=\"urn:oasis:names:tc:opendocument:xmlns:manifest:1.0\"><odf:file-entry odf:full-path=\"Contents/section0.xml\">" +
+        "<odf:encryption-data odf:checksum-type=\"SHA1\"/></odf:file-entry></odf:manifest>"));
+    Check("암호 hwpx 거부 (manifest 표시)", TestUtil.Throws<DocumentNotSupportedException>(() => new HwpxPackage(encrypted)));
+    var scrambled = TestUtil.ZipWith(sample, "Contents/section0.xml", new byte[] { 0x9C, 0x3A, 0x11, 0xF0, 0x42 });
+    Check("암호 hwpx 거부 (본문이 XML 아님)", TestUtil.Throws<DocumentNotSupportedException>(() => new HwpxPackage(scrambled)));
+    var withBom = TestUtil.ZipWith(sample, "Contents/section0.xml", new byte[] { 0xEF, 0xBB, 0xBF, (byte)'\n', (byte)'<', (byte)'a', (byte)'/', (byte)'>' });
+    Check("BOM 있는 본문 XML은 그대로 열림", !TestUtil.Throws<Exception>(() => new HwpxPackage(withBom).Dispose()));
 }
 
 Console.WriteLine("[문서: 한글 그림 형식 바꾸기]");
@@ -307,7 +402,84 @@ else
         Check("흑백으로 바꾸면 색 성분 1", grayAgain.Images.All(i => i.Components == 1), string.Join(",", grayAgain.Images.Select(i => i.Components)));
     }
     Check("암호 PDF 거부", TestUtil.Throws<DocumentNotSupportedException>(() => new PdfPackage(File.ReadAllBytes(Path.Combine(fixtures, "encrypted.pdf")), qpdf, temp)));
+
+    // 투명 마스크(/SMask)로 쓰이는 그림은 다시 압축하지 않는다. 마스크가 아닌 흑백 그림은 그대로 줄인다.
+    {
+        const int n = 300;
+        var color = new byte[n * n * 3];
+        var gray = new byte[n * n];
+        Random.Shared.NextBytes(color);
+        Random.Shared.NextBytes(gray);
+        var smaskPdf = TestUtil.MakePdf(
+            ("<< /Type /Catalog /Pages 2 0 R >>", null),
+            ("<< /Type /Pages /Count 1 /Kids [3 0 R] >>", null),
+            ("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Resources << /XObject << /Im0 4 0 R /Im1 6 0 R >> >> /Contents 7 0 R >>", null),
+            ($"<< /Type /XObject /Subtype /Image /Width {n} /Height {n} /ColorSpace /DeviceRGB /BitsPerComponent 8 /SMask 5 0 R >>", color),
+            ($"<< /Type /XObject /Subtype /Image /Width {n} /Height {n} /ColorSpace /DeviceGray /BitsPerComponent 8 >>", gray),
+            ($"<< /Type /XObject /Subtype /Image /Width {n} /Height {n} /ColorSpace /DeviceGray /BitsPerComponent 8 >>", gray),
+            ("<< >>", System.Text.Encoding.ASCII.GetBytes("q 300 0 0 300 0 0 cm /Im0 Do /Im1 Do Q")));
+        using var masked = new PdfPackage(smaskPdf, qpdf, temp);
+        var keys = masked.Images.Select(i => i.Key).ToList();
+        Check("투명 마스크는 건드리지 않음", !keys.Contains("obj:5 0 R"), string.Join(",", keys));
+        Check("마스크를 쓰는 그림·일반 흑백 그림은 줄임", keys.Contains("obj:4 0 R") && keys.Contains("obj:6 0 R"), string.Join(",", keys));
+    }
+
+    // 멈추기: 이미 멈춘 상태면 qpdf를 시작하지 않고, 오래 걸리는 qpdf는 도중에 끈다.
+    {
+        using var stopped = new CancellationTokenSource();
+        stopped.Cancel();
+        Check("멈춘 뒤에는 PDF를 열지 않음", TestUtil.Throws<OperationCanceledException>(() => new PdfPackage(original, qpdf, temp, stopped.Token).Dispose()));
+        if (OperatingSystem.IsWindows())
+        {
+            // 60초 동안 아무것도 안 하는 가짜 qpdf
+            var slow = Path.Combine(Path.GetTempPath(), "ssok-slow-qpdf-" + Guid.NewGuid().ToString("N") + ".cmd");
+            File.WriteAllText(slow, "@ping -n 60 127.0.0.1 > nul\r\n");
+            using var soon = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            bool canceled = TestUtil.Throws<OperationCanceledException>(() => new PdfPackage(original, slow, temp, soon.Token).Dispose());
+            Check("PDF 처리 중 멈추기", canceled && sw.Elapsed < TimeSpan.FromSeconds(10), $"{sw.ElapsedMilliseconds}ms");
+            try { File.Delete(slow); } catch { }
+        }
+    }
     Check("임시 폴더 남지 않음", !Directory.Exists(temp) || !Directory.EnumerateDirectories(temp).Any());
+}
+
+Console.WriteLine("[업데이트 파일]");
+{
+    // 받는 양 제한
+    var data = new byte[1000];
+    Random.Shared.NextBytes(data);
+    var read = await UpdateFile.ReadLimitedAsync(new MemoryStream(data), 1000);
+    Check("한도 안이면 그대로 받음", read.SequenceEqual(data));
+    bool tooBig = false;
+    try { await UpdateFile.ReadLimitedAsync(new MemoryStream(data), 999); }
+    catch (InvalidDataException) { tooBig = true; }
+    Check("한도를 넘으면 멈춤", tooBig);
+
+    var dir = Path.Combine(Path.GetTempPath(), "ssok-update-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(dir);
+    try
+    {
+        var file = Path.Combine(dir, "setup.exe");
+        File.WriteAllBytes(file, data);
+        var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(data));
+
+        using (var locked = await UpdateFile.OpenVerifiedAsync(file, sha.ToLowerInvariant()))
+        {
+            Check("지문이 맞으면 열림", locked.Position == 0 && locked.Length == data.Length);
+            Check("확인 뒤에는 고쳐 쓸 수 없음", TestUtil.Fails(() => File.OpenWrite(file).Dispose()));
+            Check("확인 뒤에는 지울 수 없음", TestUtil.Fails(() => File.Delete(file)) && File.Exists(file));
+            Check("확인 뒤에도 읽기(실행)는 됨", !TestUtil.Fails(() => new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read).Dispose()));
+        }
+        Check("닫으면 잠금 풀림", !TestUtil.Fails(() => File.OpenWrite(file).Dispose()));
+
+        bool rejected = false;
+        try { (await UpdateFile.OpenVerifiedAsync(file, new string('0', 64))).Dispose(); }
+        catch (InvalidDataException) { rejected = true; }
+        Check("지문이 다르면 거부", rejected);
+        Check("지문이 다르면 파일 지움", !File.Exists(file));
+    }
+    finally { Directory.Delete(dir, recursive: true); }
 }
 
 Console.WriteLine();
@@ -339,6 +511,63 @@ static class TestUtil
 public static bool Throws<T>(Action a) where T : Exception
 {
     try { a(); return false; } catch (T) { return true; } catch { return false; }
+}
+
+/// <summary>
+/// 객체 목록으로 작은 PDF를 만든다. 객체 번호는 1부터 순서대로. data가 있으면 스트림(압축 없음)으로 쓴다.
+/// </summary>
+public static byte[] MakePdf(params (string Dict, byte[]? Data)[] objects)
+{
+    var latin1 = System.Text.Encoding.Latin1;
+    using var ms = new MemoryStream();
+    void Ascii(string s) => ms.Write(latin1.GetBytes(s));
+    Ascii("%PDF-1.4\n");
+    var offsets = new long[objects.Length];
+    for (int i = 0; i < objects.Length; i++)
+    {
+        offsets[i] = ms.Position;
+        var (dict, data) = objects[i];
+        if (data is null) { Ascii($"{i + 1} 0 obj\n{dict}\nendobj\n"); continue; }
+        // 사전 끝(>>) 앞에 /Length를 넣는다.
+        Ascii($"{i + 1} 0 obj\n{dict[..dict.LastIndexOf(">>", StringComparison.Ordinal)]} /Length {data.Length} >>\nstream\n");
+        ms.Write(data);
+        Ascii("\nendstream\nendobj\n");
+    }
+    long xref = ms.Position;
+    Ascii($"xref\n0 {objects.Length + 1}\n0000000000 65535 f \n");
+    foreach (var o in offsets) Ascii($"{o:D10} 00000 n \n");
+    Ascii($"trailer\n<< /Size {objects.Length + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n");
+    return ms.ToArray();
+}
+
+/// <summary>어떤 예외든 나면 true.</summary>
+public static bool Fails(Action a)
+{
+    try { a(); return false; } catch { return true; }
+}
+
+/// <summary>zip(hwpx)에서 name 항목을 data로 바꾼다. 없으면 맨 뒤에 더한다. 나머지 항목은 그대로.</summary>
+public static byte[] ZipWith(byte[] source, string name, byte[] data)
+{
+    using var output = new MemoryStream();
+    using (var src = new ZipArchive(new MemoryStream(source), ZipArchiveMode.Read))
+    using (var dst = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+    {
+        bool replaced = false;
+        foreach (var e in src.Entries)
+        {
+            var level = e.FullName == "mimetype" ? CompressionLevel.NoCompression : CompressionLevel.Optimal;
+            using var s = dst.CreateEntry(e.FullName, level).Open();
+            if (e.FullName == name) { s.Write(data); replaced = true; }
+            else { using var r = e.Open(); r.CopyTo(s); }
+        }
+        if (!replaced)
+        {
+            using var s = dst.CreateEntry(name).Open();
+            s.Write(data);
+        }
+    }
+    return output.ToArray();
 }
 
 public static string FindFixtures()
@@ -378,6 +607,18 @@ sealed class FakeRecoder(bool gray = false) : IImageRecoder
     }
 }
 
+// 글자 부분(fixed) + 크기가 서로 다른 그림들로 된 가짜 문서
+sealed class SizedPackage(long fixedBytes, int[] imageSizes) : IDocumentPackage
+{
+    private readonly List<DocImage> _images = imageSizes
+        .Select((s, i) => new DocImage { Key = "i" + i, Codec = ImageCodec.Jpeg, OutputCodec = ImageCodec.Jpeg, Data = new byte[s] }).ToList();
+    public long OriginalSize => fixedBytes + _images.Sum(i => (long)i.Data.Length);
+    public IReadOnlyList<DocImage> Images => _images;
+    public byte[] Build(IReadOnlyDictionary<string, RecodedImage> replacements, CancellationToken cancel = default)
+        => new byte[fixedBytes + _images.Sum(i => (long)(replacements.TryGetValue(i.Key, out var r) ? r.Data.Length : i.Data.Length))];
+    public void Dispose() { }
+}
+
 // 글자 부분(fixed) + 그림 n개로 된 가짜 문서
 sealed class FakePackage(long fixedBytes, int images, int imageBytes) : IDocumentPackage
 {
@@ -391,7 +632,7 @@ sealed class FakePackage(long fixedBytes, int images, int imageBytes) : IDocumen
         var r = new FakeRecoder();
         return fixedBytes + _images.Sum(i => (long)Math.Min(i.Data.Length, r.Recode(i, side, q)!.Data.Length));
     }
-    public byte[] Build(IReadOnlyDictionary<string, RecodedImage> replacements)
+    public byte[] Build(IReadOnlyDictionary<string, RecodedImage> replacements, CancellationToken cancel = default)
         => new byte[fixedBytes + _images.Sum(i => (long)(replacements.TryGetValue(i.Key, out var r) ? r.Data.Length : i.Data.Length))];
     public void Dispose() { }
 }

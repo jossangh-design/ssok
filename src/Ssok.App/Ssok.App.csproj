@@ -11,7 +11,7 @@
     <AssemblyName>Ssok</AssemblyName>
     <RootNamespace>Ssok.App</RootNamespace>
 
-    <Version>0.4.0</Version>
+    <Version>1.4.1</Version>
     <Product>쏙</Product>
     <AssemblyTitle>쏙 - 문서·사진 용량 줄이기</AssemblyTitle>
     <Company>Ssok contributors</Company>

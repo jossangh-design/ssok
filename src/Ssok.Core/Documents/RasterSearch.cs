@@ -15,14 +15,22 @@ public static class RasterSearch
         (34, 25), (30, 22),
     };
 
+    /// <summary>사용자가 '알아보기 어려워도 목표에 맞추기'를 고른 경우에만 더 쓰는 단계.</summary>
+    public static readonly IReadOnlyList<(int Dpi, int Quality)> ExtraLadder = new[] { (24, 18), (20, 15), (16, 12) };
+
+    public static IReadOnlyList<(int Dpi, int Quality)> LadderFor(bool force)
+        => force ? Ladder.Concat(ExtraLadder).ToArray() : Ladder;
+
     public sealed record Result(byte[] Data, int Level, bool Reached, int Attempts);
 
     /// <param name="build">단계 번호를 받아 그 단계로 만든 PDF를 돌려준다.</param>
     /// <param name="onAttempt">새 단계를 만들기 시작할 때 (시도 번호, 단계 번호).</param>
+    /// <param name="ladder">쓸 단계표. 없으면 기본 단계표(Ladder).</param>
     public static Result Find(Func<int, byte[]> build, long targetBytes, Action<int, int>? onAttempt = null,
-                              CancellationToken cancel = default)
+                              CancellationToken cancel = default, IReadOnlyList<(int Dpi, int Quality)>? ladder = null)
     {
         ArgumentNullException.ThrowIfNull(build);
+        var steps = ladder ?? Ladder;
         var made = new Dictionary<int, byte[]>();
         int attempts = 0;
 
@@ -38,7 +46,7 @@ public static class RasterSearch
         }
 
         // 목표 이하인 가장 앞(선명한) 단계를 이분 탐색으로 찾는다.
-        int lo = 0, hi = Ladder.Count - 1, best = -1;
+        int lo = 0, hi = steps.Count - 1, best = -1;
         while (lo <= hi)
         {
             int mid = (lo + hi) / 2;
@@ -47,7 +55,7 @@ public static class RasterSearch
         }
 
         if (best >= 0) return new Result(made[best], best, true, attempts);
-        int last = Ladder.Count - 1;
+        int last = steps.Count - 1;
         return new Result(Make(last), last, false, attempts);
     }
 
@@ -57,11 +65,12 @@ public static class RasterSearch
     /// </summary>
     /// <param name="estimate">단계 번호를 받아 예상 파일 크기를 돌려준다 (전체를 만드는 것보다 훨씬 빨라야 한다).</param>
     public static Result FindWithEstimate(Func<int, byte[]> build, Func<int, long> estimate, long targetBytes,
-                                          Action<int, int>? onAttempt = null, CancellationToken cancel = default)
+                                          Action<int, int>? onAttempt = null, CancellationToken cancel = default,
+                                          IReadOnlyList<(int Dpi, int Quality)>? ladder = null)
     {
         ArgumentNullException.ThrowIfNull(build);
         ArgumentNullException.ThrowIfNull(estimate);
-        int last = Ladder.Count - 1;
+        int last = (ladder ?? Ladder).Count - 1;
         var made = new Dictionary<int, byte[]>();
         int attempts = 0;
 

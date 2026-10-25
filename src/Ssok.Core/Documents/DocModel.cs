@@ -73,7 +73,8 @@ public interface IDocumentPackage : IDisposable
     IReadOnlyList<DocImage> Images { get; }
 
     /// <summary>바꿀 그림만 넣은 표로 새 문서를 만든다. 표에 없는 그림은 그대로 둔다.</summary>
-    byte[] Build(IReadOnlyDictionary<string, RecodedImage> replacements);
+    /// <param name="cancel">'멈추기'를 누르면 만들던 중이라도 멈춘다 (PDF처럼 오래 걸리는 형식).</param>
+    byte[] Build(IReadOnlyDictionary<string, RecodedImage> replacements, CancellationToken cancel = default);
 }
 
 /// <summary>사용자에게 그대로 보여줄 수 있는 문장을 담은 예외. 경로·파일 이름은 넣지 않는다.</summary>

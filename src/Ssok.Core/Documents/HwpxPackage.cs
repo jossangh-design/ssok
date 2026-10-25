@@ -76,10 +76,40 @@ public sealed class HwpxPackage : IDocumentPackage
 
             if (!hasMimetype || !_entries.Any(e => e.Name.StartsWith("Contents/", StringComparison.OrdinalIgnoreCase)))
                 throw new DocumentNotSupportedException("hwpx 문서 구조가 아니에요.");
+            if (IsProtected())
+                throw new DocumentNotSupportedException("암호·배포용·전자서명이 있는 문서는 바꾸지 않아요.");
         }
     }
 
-    public byte[] Build(IReadOnlyDictionary<string, RecodedImage> replacements)
+    /// <summary>
+    /// 전자서명·암호(배포용 포함)가 걸린 문서인지. 바꾸면 서명이 깨지거나 문서가 열리지 않으므로 건드리지 않는다.
+    /// - META-INF 안에 서명 파일(이름에 signature)이 있으면 전자서명 문서
+    /// - manifest.xml에 encryption-data가 있으면 암호 문서
+    /// - 본문 XML(Contents/*.xml)이 XML로 시작하지 않으면 암호화된 것으로 본다 (위 표시가 없는 경우 대비)
+    /// </summary>
+    private bool IsProtected()
+    {
+        foreach (var e in _entries)
+        {
+            if (!e.Name.StartsWith("META-INF/", StringComparison.OrdinalIgnoreCase)) continue;
+            if (e.Name.Contains("signature", StringComparison.OrdinalIgnoreCase)) return true;
+            if (e.Name.EndsWith("manifest.xml", StringComparison.OrdinalIgnoreCase)
+                && Encoding.UTF8.GetString(e.Data).Contains("encryption-data", StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return _entries.Any(e => e.Name.StartsWith("Contents/", StringComparison.OrdinalIgnoreCase)
+                                 && e.Name.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
+                                 && e.Data.Length > 0 && !LooksLikeXml(e.Data));
+    }
+
+    /// <summary>BOM·공백을 건너뛴 첫 글자가 '&lt;'이면 XML로 본다.</summary>
+    private static bool LooksLikeXml(byte[] data)
+    {
+        int i = data.Length >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF ? 3 : 0;
+        while (i < data.Length && data[i] is (byte)' ' or (byte)'\t' or (byte)'\r' or (byte)'\n') i++;
+        return i < data.Length && data[i] == (byte)'<';
+    }
+
+    public byte[] Build(IReadOnlyDictionary<string, RecodedImage> replacements, CancellationToken cancel = default)
     {
         // 형식이 바뀐 그림: 새 이름을 정하고 content.hpf를 고친다. 고칠 수 없으면 그 그림은 바꾸지 않는다.
         var renames = new Dictionary<string, string>(StringComparer.Ordinal);

@@ -105,6 +105,9 @@ internal sealed class FileItem : INotifyPropertyChanged
 
     public string? ResultPath { get; set; }
 
+    /// <summary>화질을 크게 낮추면 목표에 맞출 수도 있는지 (마지막으로 줄인 결과 기준).</summary>
+    public bool CanForce { get; set; }
+
     private string? _saveSource;
     /// <summary>다운로드할 때 내보낼 파일 (줄인 결과, 또는 이미 작아서 그대로 쓸 원본).</summary>
     public string? SaveSource
@@ -145,6 +148,7 @@ internal sealed class FileItem : INotifyPropertyChanged
     {
         if (!FileKinds.IsReadyNow(Kind)) return;
         ResultPath = null;
+        CanForce = false;
         SaveSource = null;
         SaveName = null;
         Saved = false;

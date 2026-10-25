@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Ssok.Core;
 
@@ -59,9 +60,10 @@ internal static class Updater
         {
             using var http = NewClient();
             var baseUrl = $"https://github.com/{Repo}/releases/latest/download/";
-            var json = await http.GetByteArrayAsync(baseUrl + "update.json", cancel);
-            var sig = (await http.GetStringAsync(baseUrl + "update.json.sig", cancel)).Trim();
-            if (json.Length > 64 * 1024 || !Verify(json, sig))
+            // 받기 전부터 양을 제한한다 (가짜 서버가 끝없이 보내도 메모리가 차지 않게).
+            var json = await GetLimitedAsync(http, baseUrl + "update.json", MaxJsonBytes, cancel);
+            var sig = Encoding.UTF8.GetString(await GetLimitedAsync(http, baseUrl + "update.json.sig", MaxSigBytes, cancel)).Trim();
+            if (!Verify(json, sig))
             {
                 AppLog.Info("update-signature-invalid");
                 return null;
@@ -88,6 +90,19 @@ internal static class Updater
         }
     }
 
+    private const long MaxJsonBytes = 64 * 1024;
+    private const long MaxSigBytes = 4 * 1024;
+    private const long MaxSetupBytes = 300L * 1024 * 1024;
+
+    private static async Task<byte[]> GetLimitedAsync(HttpClient http, string url, long maxBytes, CancellationToken cancel)
+    {
+        using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancel);
+        response.EnsureSuccessStatusCode();
+        if (response.Content.Headers.ContentLength > maxBytes) throw new InvalidDataException("받을 내용이 너무 큽니다.");
+        await using var input = await response.Content.ReadAsStreamAsync(cancel);
+        return await UpdateFile.ReadLimitedAsync(input, maxBytes, cancel);
+    }
+
     private static bool Verify(byte[] data, string signatureBase64)
     {
         try
@@ -102,48 +117,54 @@ internal static class Updater
         }
     }
 
-    /// <summary>설치 파일을 내려받아 지문을 확인한 뒤 경로를 돌려준다. 지문이 다르면 지우고 예외.</summary>
-    public static async Task<string> DownloadAsync(Release release, IProgress<double>? progress, CancellationToken cancel = default)
+    /// <summary>
+    /// 지문을 확인한 설치 파일. 닫기(Dispose) 전까지 파일이 잠겨 있어 다른 프로그램이 바꿔치기할 수 없다.
+    /// </summary>
+    public sealed class VerifiedSetup(string path, FileStream lockHandle) : IDisposable
     {
-        var dir = Path.Combine(Path.GetTempPath(), "Ssok", "update");
+        public string Path => path;
+        public void Dispose() => lockHandle.Dispose();
+    }
+
+    /// <summary>설치 파일을 내려받아 지문을 확인한 뒤 잠근 채로 돌려준다. 지문이 다르거나 너무 크면 지우고 예외.</summary>
+    public static async Task<VerifiedSetup> DownloadAsync(Release release, IProgress<double>? progress, CancellationToken cancel = default)
+    {
+        if (release.Size > MaxSetupBytes) throw new InvalidDataException("설치 파일이 너무 큽니다.");
+        // 받을 때마다 새 폴더를 써서, 미리 같은 이름의 파일을 만들어 두는 일을 막는다.
+        var dir = Path.Combine(Path.GetTempPath(), "Ssok", "update-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         var file = Path.Combine(dir, $"Ssok-Setup-{release.Version.ToString(3)}.exe");
-        if (File.Exists(file)) File.Delete(file);
 
-        using var http = NewClient();
-        http.Timeout = TimeSpan.FromMinutes(10);
-        using (var response = await http.GetAsync(release.SetupUrl, HttpCompletionOption.ResponseHeadersRead, cancel))
+        try
         {
-            response.EnsureSuccessStatusCode();
-            long total = response.Content.Headers.ContentLength ?? release.Size;
-            await using var input = await response.Content.ReadAsStreamAsync(cancel);
-            await using var output = new FileStream(file, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-            var buffer = new byte[81920];
-            long done = 0;
-            int read;
-            while ((read = await input.ReadAsync(buffer, cancel)) > 0)
+            using var http = NewClient();
+            http.Timeout = TimeSpan.FromMinutes(10);
+            using (var response = await http.GetAsync(release.SetupUrl, HttpCompletionOption.ResponseHeadersRead, cancel))
             {
-                await output.WriteAsync(buffer.AsMemory(0, read), cancel);
-                done += read;
-                if (total > 0) progress?.Report((double)done / total);
+                response.EnsureSuccessStatusCode();
+                if (response.Content.Headers.ContentLength > MaxSetupBytes) throw new InvalidDataException("설치 파일이 너무 큽니다.");
+                long total = response.Content.Headers.ContentLength ?? release.Size;
+                await using var input = await response.Content.ReadAsStreamAsync(cancel);
+                await using var output = new FileStream(file, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                var report = progress is null || total <= 0 ? null : new Progress<long>(done => progress!.Report((double)done / total));
+                await UpdateFile.CopyLimitedAsync(input, output, MaxSetupBytes, report, cancel);
             }
         }
-
-        string actual;
-        await using (var check = File.OpenRead(file))
-            actual = Convert.ToHexString(await SHA256.HashDataAsync(check, cancel));
-        if (!actual.Equals(release.Sha256, StringComparison.OrdinalIgnoreCase))
+        catch
         {
-            File.Delete(file);
-            throw new InvalidDataException("내려받은 설치 파일의 지문이 맞지 않습니다.");
+            try { Directory.Delete(dir, recursive: true); } catch { }
+            throw;
         }
-        return file;
+
+        // 지문 확인부터 실행까지 같은 잠금을 유지한다.
+        var locked = await UpdateFile.OpenVerifiedAsync(file, release.Sha256, cancel);
+        return new VerifiedSetup(file, locked);
     }
 
     /// <summary>설치 파일을 조용히 실행한다. 설치가 끝나면 설치 파일이 쏙을 다시 켠다.</summary>
-    public static void RunInstaller(string setupPath)
+    public static void RunInstaller(VerifiedSetup setup)
     {
-        Process.Start(new ProcessStartInfo(setupPath, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS")
+        Process.Start(new ProcessStartInfo(setup.Path, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS")
         {
             UseShellExecute = true,
         });

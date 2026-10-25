@@ -196,7 +196,7 @@ public sealed class HwpPackage : IDocumentPackage
         }
     }
 
-    public byte[] Build(IReadOnlyDictionary<string, RecodedImage> replacements)
+    public byte[] Build(IReadOnlyDictionary<string, RecodedImage> replacements, CancellationToken cancel = default)
     {
         var work = new MemoryStream();
         work.Write(_original);

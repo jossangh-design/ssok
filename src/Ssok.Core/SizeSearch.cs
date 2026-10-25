@@ -20,7 +20,8 @@ public sealed record ShrinkOptions
 
     /// <summary>이보다 낮은 품질은 글자가 뭉개져서 쓰지 않는다. 대신 크기를 줄인다.</summary>
     public int MinQuality { get; init; } = 50;
-    public int MaxQuality { get; init; } = 100;
+    /// <summary>95보다 높으면 눈으로는 차이가 없는데 용량만 크게 늘어서 쓰지 않는다.</summary>
+    public int MaxQuality { get; init; } = 95;
 
     /// <summary>한 번에 줄이는 비율. 0.85면 가로·세로를 15%씩 줄여 가며 찾는다.</summary>
     public double ScaleStep { get; init; } = 0.85;

@@ -95,7 +95,8 @@ public partial class MainWindow : Window
     {
         bytes = 0;
         if (!TryGetTargetMb(out var mb)) return false;
-        bytes = (long)(mb * 1024 * 1024);
+        // 제출 시스템에 걸리지 않게 조금 더 작게 맞춘다 (화면에는 적은 값 그대로).
+        bytes = TargetSize.SafeBytesFromMb(mb);
         return bytes >= TargetSize.MinBytes;
     }
 
@@ -369,6 +370,8 @@ public partial class MainWindow : Window
         }
 
         bool combined = CombinedMode.IsChecked == true;
+        // "모두 합쳐서"는 ZIP 하나로 받아도 목표 안에 들도록 ZIP으로 묶을 때 늘어나는 양을 미리 뺀다.
+        if (combined) target -= ZipReserve();
         var globalFormat = (PhotoFormat)Math.Max(0, PhotoFormatBox.SelectedIndex);
         bool removeLocation = RemoveLocationBox.IsChecked == true;
         bool pdfGray = PdfGrayBox.IsChecked == true;
@@ -402,6 +405,25 @@ public partial class MainWindow : Window
                 budget -= item.ResultBytes ?? item.OriginalBytes;
             }
 
+            // 화질을 지키느라 목표에 못 미친 파일이 있으면, 알아보기 어려워도 목표에 맞출지 한 번만 묻는다
+            // (목적 1순위는 용량 맞추기). 고르면 이번 작업의 나머지(합계 다시 맞추기 포함)도 같은 방식으로 한다.
+            bool force = false;
+            var blocked = work.Where(i => i.CanForce).ToList();
+            if (blocked.Count > 0 && !cancel.IsCancellationRequested && AskForce(blocked.Count))
+            {
+                force = true;
+                // 합쳐서 모드: 나머지 파일이 쓰고 남은 용량을 못 맞춘 파일끼리 원래 크기에 비례해 나눈다.
+                long room = target - _items.Except(blocked).Sum(i => i.ResultBytes ?? i.OriginalBytes);
+                var shares = TargetPlanner.Split(Math.Max(0, room), blocked.Select(i => i.OriginalBytes).ToList());
+                for (int k = 0; k < blocked.Count; k++)
+                {
+                    if (cancel.IsCancellationRequested) break;
+                    long goal = combined ? shares[k] : target;
+                    if (!await ShrinkItemAsync(blocked[k], goal, globalFormat, removeLocation, pdfGray, cancel, keepOnCancel: true, force: true))
+                        break;
+                }
+            }
+
             // "모두 합쳐서" 다시 맞추기: 더 줄일 수 없는 파일(목표 미달)이 있어 합계가 넘치면,
             // 아직 여유가 있는 파일(목표에 맞춘 파일·그대로 둔 파일)을 그만큼 더 줄인다.
             if (combined)
@@ -422,7 +444,7 @@ public partial class MainWindow : Window
                         var item = flexible[k];
                         if ((item.ResultBytes ?? item.OriginalBytes) <= shares[k]) continue;
                         changed = true;
-                        if (!await ShrinkItemAsync(item, shares[k], globalFormat, removeLocation, pdfGray, cancel, keepOnCancel: true))
+                        if (!await ShrinkItemAsync(item, shares[k], globalFormat, removeLocation, pdfGray, cancel, keepOnCancel: true, force: force))
                             break;
                     }
                     if (!changed) break;
@@ -443,9 +465,10 @@ public partial class MainWindow : Window
     /// <summary>
     /// 파일 하나를 fileTarget 이하로 줄여 결과를 목록에 적는다. 전체 '멈추기'를 눌렀으면 false.
     /// keepOnCancel: 다시 줄이다가 멈추면 앞서 만든 결과를 그대로 둔다 (합계 다시 맞추기용).
+    /// force: 알아보기 어려울 만큼 줄여서라도 목표에 맞춘다 (사용자가 창에서 고른 경우).
     /// </summary>
     private async Task<bool> ShrinkItemAsync(FileItem item, long fileTarget, PhotoFormat globalFormat, bool removeLocation,
-                                             bool pdfGray, CancellationToken cancel, bool keepOnCancel)
+                                             bool pdfGray, CancellationToken cancel, bool keepOnCancel, bool force = false)
     {
         var before = (item.ResultBytes, item.ResultPath, item.PreviewBefore, item.PreviewAfter, item.Saved,
                       item.SaveSource, item.SaveName, item.IsSelected, item.Message, item.State);
@@ -453,7 +476,7 @@ public partial class MainWindow : Window
         item.State = ItemState.Working;
         item.Message = "";
 
-        var options = new WorkOptions(fileTarget, item.EffectiveFormat(globalFormat), removeLocation, pdfGray);
+        var options = new WorkOptions(fileTarget, item.EffectiveFormat(globalFormat), removeLocation, pdfGray, Force: force);
         // 파일마다 칸을 따로 두어, 이름이 같은 파일도 저장할 때 원래 이름을 쓸 수 있게 한다.
         var holdFor = Path.Combine(_holdDir, Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(holdFor);
@@ -485,6 +508,7 @@ public partial class MainWindow : Window
             else
             {
                 item.ResultBytes = null;
+                item.CanForce = false;
                 item.State = ItemState.Waiting;
                 item.Message = outcome.Message;
             }
@@ -498,6 +522,7 @@ public partial class MainWindow : Window
 
         item.ResultBytes = outcome.ResultBytes;
         item.ResultPath = outcome.ResultPath;
+        item.CanForce = outcome.CanForce;
         item.PreviewBefore = outcome.PreviewBefore;
         item.PreviewAfter = outcome.PreviewAfter;
         item.Saved = false;
@@ -528,6 +553,21 @@ public partial class MainWindow : Window
         };
         return true;
     }
+
+    /// <summary>알아보기 어려울 만큼 줄여서라도 목표에 맞출지 묻는다. 기본은 '예' (용량 맞추기가 먼저).</summary>
+    private bool AskForce(int count)
+        => MessageBox.Show(this,
+               $"목표 용량에 맞추려면 글자나 사진을 알아보기 어려울 만큼 줄여야 하는 파일이 {count}개 있습니다.\n\n" +
+               "그래도 목표에 맞춰 줄일까요? 원본은 그대로 남습니다.",
+               "쏙", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes) == MessageBoxResult.Yes;
+
+    /// <summary>목록의 파일을 모두 ZIP 하나로 받을 때 늘어나는 양. 파일이 하나면 ZIP으로 묶지 않으므로 0.</summary>
+    private long ZipReserve()
+        => _items.Count > 1 ? TargetPlanner.ZipOverhead(_items.Select(PlannedSaveName)) : 0;
+
+    /// <summary>저장할 이름. 아직 줄이기 전이면 원래이름_쏙.확장자로 어림한다.</summary>
+    private static string PlannedSaveName(FileItem item)
+        => item.SaveName ?? Path.GetFileNameWithoutExtension(item.Path) + SafeOutput.Suffix + Path.GetExtension(item.Path);
 
     private bool HasFinished()
         => _items.Any(i => FileKinds.IsReadyNow(i.Kind) && i.State is not (ItemState.Waiting or ItemState.Working));
@@ -692,8 +732,9 @@ public partial class MainWindow : Window
                     var ext = Path.GetExtension(saveName);
                     var name = stem + ext;
                     for (int n = 2; !used.Add(name); n++) name = $"{stem}({n}){ext}";
-                    // 사진·PDF는 이미 압축된 파일이라 빠르게만 묶는다.
-                    zip.CreateEntryFromFile(source, name, CompressionLevel.Fastest);
+                    // 사진·PDF·한글 문서는 이미 압축된 파일이라 더 줄지 않는다. 압축 없이 묶어야
+                    // ZIP 크기를 정확히 알 수 있다 ("모두 합쳐서" 목표 계산).
+                    zip.CreateEntryFromFile(source, name, CompressionLevel.NoCompression);
                 }
             }, overwrite: true);
             return zipPath;
@@ -772,6 +813,7 @@ public partial class MainWindow : Window
 
     private Updater.Release? _newRelease;
     private bool _updating;
+    private Updater.VerifiedSetup? _pendingSetup;
 
     private void OnUpdateOptionChanged(object sender, RoutedEventArgs e)
     {
@@ -825,9 +867,10 @@ public partial class MainWindow : Window
         try
         {
             var progress = new Progress<double>(p => UpdateButton.Content = $"내려받는 중 {Math.Round(p * 100)}%");
-            var setup = await Updater.DownloadAsync(release, progress);
+            // 잠금은 쏙이 닫힐 때까지 쥐고 있는다 (설치 프로그램이 파일을 다 읽기 전에 바꿔치기되지 않게).
+            _pendingSetup = await Updater.DownloadAsync(release, progress);
             UpdateButton.Content = "설치하는 중…";
-            Updater.RunInstaller(setup);
+            Updater.RunInstaller(_pendingSetup);
             AppLog.Info("update-start v" + release.Version.ToString(3));
             _closeAfterStop = true; // 이미 물어봤으므로 닫을 때 다시 묻지 않는다
             Close();
@@ -835,6 +878,8 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             AppLog.Error("update", ex);
+            _pendingSetup?.Dispose();
+            _pendingSetup = null;
             _updating = false;
             UpdateButton.IsEnabled = true;
             UpdateButton.Content = $"새 버전 {release.Version.ToString(3)} 받기";
@@ -923,10 +968,14 @@ public partial class MainWindow : Window
         var summary = done == 0
             ? $"모두 {TargetSize.Format(before)}"
             : $"{done}개 완료 · 모두 {TargetSize.Format(before)} → {TargetSize.Format(after)}";
-        if (CombinedMode.IsChecked == true && targetOk)
-            summary += after <= target || done == 0
-                ? $" · 목표 합계 {TargetSize.Format(target)}"
-                : $" · 목표 합계 {TargetSize.Format(target)}보다 큽니다. 목표를 조금 올려 보세요.";
+        if (CombinedMode.IsChecked == true && targetOk && TryGetTargetMb(out var mb))
+        {
+            // 목표는 사용자가 적은 값 그대로 보여 주고, 비교는 여유를 둔 값(ZIP으로 묶을 때 늘어나는 양 포함)으로 한다.
+            var shown = mb < 1 ? $"{mb * 1000:0.##}KB" : $"{mb.ToString("0.##", CultureInfo.InvariantCulture)}MB";
+            summary += after <= target - ZipReserve() || done == 0
+                ? $" · 목표 합계 {shown}"
+                : $" · 목표 합계 {shown}보다 큽니다. 목표를 조금 올려 보세요.";
+        }
         Summary.Text = summary;
     }
 }

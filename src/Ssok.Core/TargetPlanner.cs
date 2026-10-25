@@ -7,6 +7,16 @@ namespace Ssok.Core;
 /// </summary>
 public static class TargetPlanner
 {
+    /// <summary>
+    /// 파일들을 ZIP 하나(압축 안 함)로 묶을 때 파일 크기 합보다 늘어나는 양.
+    /// 항목마다 머리말 두 개(30·46바이트)와 이름(UTF-8) 두 번, 끝 기록 22바이트. 항목마다 64바이트를 넉넉히 더 잡는다.
+    /// </summary>
+    public static long ZipOverhead(IEnumerable<string> entryNames)
+    {
+        ArgumentNullException.ThrowIfNull(entryNames);
+        return 22 + entryNames.Sum(n => 30 + 46 + 64 + 2L * System.Text.Encoding.UTF8.GetByteCount(n));
+    }
+
     public static long[] Split(long totalTarget, IReadOnlyList<long> sizes)
     {
         ArgumentNullException.ThrowIfNull(sizes);

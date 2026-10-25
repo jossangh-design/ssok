@@ -53,6 +53,81 @@ internal static class SelfTest
                 }
             });
 
+            // 1-0) 색 정보(ICC 프로필): 위치정보 지우기를 켜도 줄인 사진에 그대로 남아야 한다.
+            Guard("photo-icc", () =>
+            {
+                var icm = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),
+                                       "spool", "drivers", "color", "sRGB Color Space Profile.icm");
+                if (!File.Exists(icm)) { Check("색 정보 시험 (sRGB 프로필 없음, 건너뜀)", true); return; }
+                var jpg = MakePhoto(2000, 1500, new ColorContext(new Uri(icm)));
+                var path = Path.Combine(work, "icc.jpg");
+                File.WriteAllBytes(path, jpg);
+                var src = BitmapFrame.Create(new MemoryStream(jpg), BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                Check("시험 사진에 색 정보 있음", src.ColorContexts is { Count: > 0 });
+                var o = ImageWork.Shrink(path, FileKind.Jpeg, new WorkOptions(150 * 1024, PhotoFormat.Original, true, false));
+                Check("색 정보 사진 줄이기", o.Result == WorkResult.Done && o.ResultBytes <= 150 * 1024, $"{o.Result} {o.ResultBytes} {o.Message}");
+                if (o.ResultPath is null) return;
+                var f = BitmapFrame.Create(new MemoryStream(File.ReadAllBytes(o.ResultPath)), BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                Check("줄인 사진에도 색 정보 남음", f.ColorContexts is { Count: > 0 }, $"{f.ColorContexts?.Count ?? 0}");
+            });
+
+            // 1-0-1) 사진 열기 다시 쓰기: 같은 크기에서 품질만 바꿀 때는 원본을 다시 열지 않는다. 결과는 그대로.
+            Guard("photo-reuse", () =>
+            {
+                var jpg = MakePhoto(2400, 1600);
+                var image = WpfImage.Load(jpg, outputJpeg: true, keepMetadata: false);
+                var first = image.Encode(1.0, 75);
+                image.Encode(1.0, 90);
+                image.Encode(1.0, 60);
+                Check("같은 크기는 한 번만 엶", image.Decodes == 1, $"decodes={image.Decodes}");
+                var half = image.Encode(0.5, 80);
+                Check("크기가 바뀌면 다시 엶", image.Decodes == 2 && half.Length < first.Length, $"decodes={image.Decodes}");
+                var again = image.Encode(1.0, 75);
+                Check("다시 써도 결과가 같음", again.AsSpan().SequenceEqual(first), $"{first.Length} vs {again.Length}");
+
+                var path = Path.Combine(work, "speed.jpg");
+                File.WriteAllBytes(path, MakePhoto(4000, 3000));
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                var o = ImageWork.Shrink(path, FileKind.Jpeg, new WorkOptions(400 * 1024, PhotoFormat.Original, true, false));
+                Check("1200만 화소 사진 줄이기", o.Result == WorkResult.Done && o.ResultBytes <= 400 * 1024,
+                      $"{o.Result} {o.ResultBytes} {o.Message} {sw.ElapsedMilliseconds}ms");
+            });
+
+            // 1-0-2) 알아보기 어려워도 줄이기: 평소에는 '목표 미달'(물어볼 수 있음), 고르면 목표에 맞춘다.
+            Guard("photo-force", () =>
+            {
+                // 작게 줄여도 무늬가 남아 잘 안 줄어드는 사진 (평소 하한인 짧은 쪽 240px·화질 50으로는 12KB가 안 됨)
+                var path = Path.Combine(work, "force.jpg");
+                // 12px 칸마다 아무 색이나 칠한 무늬
+                const int cell = 12, cw = 3000 / cell, ch = 2000 / cell + 1;
+                var colors = new byte[cw * ch * 3];
+                new Random(3).NextBytes(colors);
+                var blocks = new byte[3000 * 2000 * 3];
+                for (int y = 0; y < 2000; y++)
+                    for (int x = 0; x < 3000; x++)
+                    {
+                        int c = ((y / cell) * cw + Math.Min(cw - 1, x / cell)) * 3, i = (y * 3000 + x) * 3;
+                        blocks[i] = colors[c]; blocks[i + 1] = colors[c + 1]; blocks[i + 2] = colors[c + 2];
+                    }
+                var noisy = BitmapSource.Create(3000, 2000, 96, 96, PixelFormats.Bgr24, null, blocks, 3000 * 3);
+                var noisyEnc = new JpegBitmapEncoder { QualityLevel = 95 };
+                noisyEnc.Frames.Add(BitmapFrame.Create(noisy));
+                using (var fs = File.Create(path)) noisyEnc.Save(fs);
+                var normal = ImageWork.Shrink(path, FileKind.Jpeg, new WorkOptions(12 * 1024, PhotoFormat.Original, true, false));
+                Check("평소에는 화질 지키고 물어봄", normal.Result == WorkResult.Failed && normal.CanForce, $"{normal.Result} {normal.Message}");
+                var forced = ImageWork.Shrink(path, FileKind.Jpeg, new WorkOptions(12 * 1024, PhotoFormat.Original, true, false, Force: true));
+                Check("고르면 목표에 맞춤", forced.Result == WorkResult.Done && forced.ResultBytes <= 12 * 1024 && !forced.CanForce,
+                      $"{forced.Result} {forced.ResultBytes} {forced.Message}");
+
+                // 평소 방식으로 맞출 수 있는 사진은, 골라 두어도 평소 결과와 똑같아야 한다 (쓸데없이 화질을 낮추지 않음).
+                var easy = Path.Combine(work, "easy.jpg");
+                File.WriteAllBytes(easy, MakePhoto(3000, 2000));
+                var a = ImageWork.Shrink(easy, FileKind.Jpeg, new WorkOptions(300 * 1024, PhotoFormat.Original, true, false));
+                var b = ImageWork.Shrink(easy, FileKind.Jpeg, new WorkOptions(300 * 1024, PhotoFormat.Original, true, false, Force: true));
+                Check("맞출 수 있으면 화질 그대로", a.Result == WorkResult.Done && a.ResultBytes == b.ResultBytes && a.Message == b.Message,
+                      $"{a.ResultBytes} {a.Message} / {b.ResultBytes} {b.Message}");
+            });
+
             // 1-1) 화면과 같은 흐름: 보관 폴더에 줄여 두고 → 저장 단추로 고른 폴더와 ZIP에 저장
             Guard("hold-and-save", () =>
             {
@@ -75,7 +150,7 @@ internal static class SelfTest
                 SafeOutput.WriteAtomic(zipPath, fs =>
                 {
                     using var zip = new System.IO.Compression.ZipArchive(fs, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true);
-                    System.IO.Compression.ZipFileExtensions.CreateEntryFromFile(zip, o.ResultPath, "hold_쏙.jpg", System.IO.Compression.CompressionLevel.Fastest);
+                    System.IO.Compression.ZipFileExtensions.CreateEntryFromFile(zip, o.ResultPath, "hold_쏙.jpg", System.IO.Compression.CompressionLevel.NoCompression);
                 }, overwrite: true);
                 using var check = System.IO.Compression.ZipFile.OpenRead(zipPath);
                 Check("ZIP으로 저장", check.Entries.Count == 1 && check.Entries[0].FullName == "hold_쏙.jpg"
@@ -321,7 +396,7 @@ internal static class SelfTest
         return ms.ToArray();
     }
 
-    private static byte[] MakePhoto(int w, int h)
+    private static byte[] MakePhoto(int w, int h, ColorContext? color = null)
     {
         var px = new byte[w * h * 3];
         var rnd = new Random(1);
@@ -335,7 +410,8 @@ internal static class SelfTest
             }
         var src = BitmapSource.Create(w, h, 96, 96, PixelFormats.Rgb24, null, px, w * 3);
         var enc = new JpegBitmapEncoder { QualityLevel = 95 };
-        enc.Frames.Add(BitmapFrame.Create(src));
+        enc.Frames.Add(color is null ? BitmapFrame.Create(src)
+            : BitmapFrame.Create(src, null, null, new System.Collections.ObjectModel.ReadOnlyCollection<ColorContext>(new[] { color })));
         using var ms = new MemoryStream();
         enc.Save(ms);
         return ms.ToArray();
